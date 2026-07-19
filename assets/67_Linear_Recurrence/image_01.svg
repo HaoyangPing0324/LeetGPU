@@ -1,0 +1,43 @@
+<svg width="640" height="200" viewBox="0 0 640 200" xmlns="http://www.w3.org/2000/svg"
+     style="display:block; margin:20px auto;">
+  <rect width="640" height="200" fill="#222" rx="8"/>
+  <!-- Title -->
+  <text x="320" y="24" fill="#ccc" font-size="13" text-anchor="middle" font-family="monospace">Linear Recurrence: h[t] = a[t] · h[t-1] + x[t]</text>
+  <!-- Boxes for h values -->
+  <rect x="40"  y="80" width="80" height="40" rx="4" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5"/>
+  <rect x="180" y="80" width="80" height="40" rx="4" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5"/>
+  <rect x="320" y="80" width="80" height="40" rx="4" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5"/>
+  <rect x="460" y="80" width="80" height="40" rx="4" fill="#1a3a5c" stroke="#4a9eff" stroke-width="1.5"/>
+  <text x="80"  y="105" fill="#4a9eff" font-size="13" text-anchor="middle" font-family="monospace">h[0]</text>
+  <text x="220" y="105" fill="#4a9eff" font-size="13" text-anchor="middle" font-family="monospace">h[1]</text>
+  <text x="360" y="105" fill="#4a9eff" font-size="13" text-anchor="middle" font-family="monospace">h[2]</text>
+  <text x="500" y="105" fill="#4a9eff" font-size="13" text-anchor="middle" font-family="monospace">h[3]</text>
+  <!-- Arrows between h values with a[t] labels -->
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 Z" fill="#7ec8a0"/>
+    </marker>
+  </defs>
+  <line x1="120" y1="100" x2="176" y2="100" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="148" y="94" fill="#7ec8a0" font-size="11" text-anchor="middle" font-family="monospace">×a[1]</text>
+  <line x1="260" y1="100" x2="316" y2="100" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="288" y="94" fill="#7ec8a0" font-size="11" text-anchor="middle" font-family="monospace">×a[2]</text>
+  <line x1="400" y1="100" x2="456" y2="100" stroke="#7ec8a0" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="428" y="94" fill="#7ec8a0" font-size="11" text-anchor="middle" font-family="monospace">×a[3]</text>
+  <!-- x[t] inputs from below -->
+  <line x1="80"  y1="152" x2="80"  y2="124" stroke="#ccc" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="220" y1="152" x2="220" y2="124" stroke="#ccc" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="360" y1="152" x2="360" y2="124" stroke="#ccc" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="500" y1="152" x2="500" y2="124" stroke="#ccc" stroke-width="1.2" marker-end="url(#arr)"/>
+  <text x="80"  y="170" fill="#ccc" font-size="12" text-anchor="middle" font-family="monospace">x[0]</text>
+  <text x="220" y="170" fill="#ccc" font-size="12" text-anchor="middle" font-family="monospace">x[1]</text>
+  <text x="360" y="170" fill="#ccc" font-size="12" text-anchor="middle" font-family="monospace">x[2]</text>
+  <text x="500" y="170" fill="#ccc" font-size="12" text-anchor="middle" font-family="monospace">x[3]</text>
+  <!-- Plus signs -->
+  <text x="80"  y="147" fill="#ccc" font-size="13" text-anchor="middle" font-family="monospace">+</text>
+  <text x="220" y="147" fill="#ccc" font-size="13" text-anchor="middle" font-family="monospace">+</text>
+  <text x="360" y="147" fill="#ccc" font-size="13" text-anchor="middle" font-family="monospace">+</text>
+  <text x="500" y="147" fill="#ccc" font-size="13" text-anchor="middle" font-family="monospace">+</text>
+  <!-- Ellipsis -->
+  <text x="590" y="105" fill="#ccc" font-size="18" text-anchor="middle" font-family="monospace">…</text>
+</svg>

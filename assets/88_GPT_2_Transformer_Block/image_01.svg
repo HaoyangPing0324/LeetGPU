@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 600" width="320" height="600" style="display:block; margin:20px auto;">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#999"/>
+    </marker>
+  </defs>
+
+  <!-- Input label -->
+  <text x="130" y="18" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">x (seq_len, 768)</text>
+
+  <!-- Arrow: input -> LN1 -->
+  <line x1="130" y1="26" x2="130" y2="44" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Residual 1: fork right, down, back left to Add1 -->
+  <line x1="130" y1="33" x2="260" y2="33" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="260" y1="33" x2="260" y2="270" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="260" y1="270" x2="145" y2="270" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#ah)"/>
+  <text x="268" y="155" fill="#666" font-size="10" font-family="sans-serif" transform="rotate(90,268,155)">residual</text>
+
+  <!-- LN1 -->
+  <rect x="55" y="47" width="150" height="30" rx="5" fill="#333" stroke="#777" stroke-width="1"/>
+  <text x="130" y="67" text-anchor="middle" fill="#ccc" font-size="12" font-family="sans-serif">LayerNorm 1</text>
+  <line x1="130" y1="77" x2="130" y2="95" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- QKV Proj -->
+  <rect x="55" y="98" width="150" height="30" rx="5" fill="#1e2d4d" stroke="#4477bb" stroke-width="1"/>
+  <text x="130" y="118" text-anchor="middle" fill="#aaccee" font-size="12" font-family="sans-serif">QKV Projection</text>
+  <line x1="130" y1="128" x2="130" y2="146" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- MHA -->
+  <rect x="55" y="149" width="150" height="30" rx="5" fill="#1e2d4d" stroke="#4477bb" stroke-width="1"/>
+  <text x="130" y="169" text-anchor="middle" fill="#aaccee" font-size="12" font-family="sans-serif">Multi-Head Attention</text>
+  <line x1="130" y1="179" x2="130" y2="197" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Attn Out Proj -->
+  <rect x="55" y="200" width="150" height="30" rx="5" fill="#1e2d4d" stroke="#4477bb" stroke-width="1"/>
+  <text x="130" y="220" text-anchor="middle" fill="#aaccee" font-size="12" font-family="sans-serif">Output Projection</text>
+  <line x1="130" y1="230" x2="130" y2="258" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Add 1 -->
+  <circle cx="130" cy="270" r="12" fill="#222" stroke="#999" stroke-width="1.5"/>
+  <text x="130" y="275" text-anchor="middle" fill="#ccc" font-size="15" font-family="sans-serif" font-weight="bold">+</text>
+  <line x1="130" y1="282" x2="130" y2="306" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Residual 2: fork right, down, back left to Add2 -->
+  <line x1="130" y1="292" x2="260" y2="292" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="260" y1="292" x2="260" y2="530" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <line x1="260" y1="530" x2="145" y2="530" stroke="#555" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#ah)"/>
+  <text x="268" y="415" fill="#666" font-size="10" font-family="sans-serif" transform="rotate(90,268,415)">residual</text>
+
+  <!-- LN2 -->
+  <rect x="55" y="309" width="150" height="30" rx="5" fill="#333" stroke="#777" stroke-width="1"/>
+  <text x="130" y="329" text-anchor="middle" fill="#ccc" font-size="12" font-family="sans-serif">LayerNorm 2</text>
+  <line x1="130" y1="339" x2="130" y2="357" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- FC -->
+  <rect x="55" y="360" width="150" height="30" rx="5" fill="#1e3d2d" stroke="#44aa66" stroke-width="1"/>
+  <text x="130" y="380" text-anchor="middle" fill="#aaeebb" font-size="12" font-family="sans-serif">Linear (768 → 3072)</text>
+  <line x1="130" y1="390" x2="130" y2="408" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- GELU -->
+  <rect x="55" y="411" width="150" height="30" rx="5" fill="#1e3d2d" stroke="#44aa66" stroke-width="1"/>
+  <text x="130" y="431" text-anchor="middle" fill="#aaeebb" font-size="12" font-family="sans-serif">GELU</text>
+  <line x1="130" y1="441" x2="130" y2="459" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Proj -->
+  <rect x="55" y="462" width="150" height="30" rx="5" fill="#1e3d2d" stroke="#44aa66" stroke-width="1"/>
+  <text x="130" y="482" text-anchor="middle" fill="#aaeebb" font-size="12" font-family="sans-serif">Linear (3072 → 768)</text>
+  <line x1="130" y1="492" x2="130" y2="518" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Add 2 -->
+  <circle cx="130" cy="530" r="12" fill="#222" stroke="#999" stroke-width="1.5"/>
+  <text x="130" y="535" text-anchor="middle" fill="#ccc" font-size="15" font-family="sans-serif" font-weight="bold">+</text>
+  <line x1="130" y1="542" x2="130" y2="566" stroke="#999" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Output label -->
+  <text x="130" y="584" text-anchor="middle" fill="#ccc" font-size="13" font-family="monospace">output (seq_len, 768)</text>
+</svg>

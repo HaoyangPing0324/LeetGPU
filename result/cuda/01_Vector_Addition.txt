@@ -1,0 +1,28 @@
+============================================================
+CUDA problem: 01_Vector_Addition
+============================================================
+[1/4] Creating remote directories...
+[2/4] Uploading source and test files...
+[3/4] Compiling and running...
+=== GPU === 
+NVIDIA GeForce RTX 5070 Ti Laptop GPU, 592.01, 12227 MiB
+=== Compile: 01_Vector_Addition === 
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+01_Vector_Addition.cu
+tmpxft_00005c2c_00000000-7_01_Vector_Addition.cudafe1.cpp
+01_Vector_Addition.cu
+tmpxft_00005c2c_00000000-11_01_Vector_Addition.cudafe1.cpp
+  正在创建库 cuda_app.lib 和对象 cuda_app.exp
+=== Program output: 01_Vector_Addition === 
+=== Vector addition correctness ===
+[PASS] vector_add correctness N=1
+[PASS] vector_add correctness N=255
+[PASS] vector_add correctness N=256
+[PASS] vector_add correctness N=257
+[PASS] vector_add correctness N=4099
+[PASS] vector_add correctness N=1048613
+=== Vector addition performance ===
+[PERF] vector_add N=25000000, iterations=20, avg=0.854 ms, max=1.225 ms, min=0.749 ms, effective bandwidth=351.120 GB/s
+PASS: vector_add test suite
+[4/4] Cleaning remote files...
+Result: PASS - 01_Vector_Addition
