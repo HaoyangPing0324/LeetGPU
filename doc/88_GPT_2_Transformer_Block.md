@@ -1,5 +1,7 @@
 # GPT-2 Transformer Block
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Hard](../assets/common/difficulty_hard.svg)
@@ -86,10 +88,13 @@ With `seq_len` = 4, `x` uniformly drawn from \[−1, 1\], and weights randomly i
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/gpt-2-transformer-block)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

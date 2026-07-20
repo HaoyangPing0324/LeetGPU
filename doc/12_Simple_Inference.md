@@ -1,5 +1,7 @@
 # Simple Inference
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Easy](../assets/common/difficulty_easy.svg)
@@ -47,10 +49,13 @@ The model performs a linear transformation: `output = input @ weight.T + bias` w
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/simple-inference)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

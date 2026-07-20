@@ -1,5 +1,7 @@
 # Dot Product
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Medium](../assets/common/difficulty_medium.svg)
@@ -42,10 +44,13 @@ Mathematically, the dot product of two vectors $A$ and $B$ of length $n$ is defi
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/dot-product)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

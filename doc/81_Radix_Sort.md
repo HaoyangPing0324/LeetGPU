@@ -1,5 +1,7 @@
 # Radix Sort
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Hard](../assets/common/difficulty_hard.svg)
@@ -42,10 +44,13 @@ Implement a radix sort algorithm that sorts an array of 32-bit unsigned integers
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/radix-sort)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

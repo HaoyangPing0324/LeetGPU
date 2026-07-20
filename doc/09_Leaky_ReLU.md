@@ -1,5 +1,7 @@
 # Leaky ReLU
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Easy](../assets/common/difficulty_easy.svg)
@@ -44,10 +46,13 @@ $$ where $\alpha$ is a small positive constant (0.01 in this problem).
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/leaky-relu)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

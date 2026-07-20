@@ -1,5 +1,7 @@
 # Reduction
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Medium](../assets/common/difficulty_medium.svg)
@@ -39,10 +41,13 @@ Write a GPU program that performs parallel reduction on an array of 32-bit float
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/reduction)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

@@ -1,5 +1,7 @@
 # Multi-Head Attention
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Hard](../assets/common/difficulty_hard.svg)
@@ -52,10 +54,13 @@ $$ 1em\] K &= \begin{bmatrix} 1.0 & 1.0 \end{bmatrix} \\ $$ 1em\] V &= \begin{bm
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/multi-head-attention)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

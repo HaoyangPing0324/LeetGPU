@@ -1,5 +1,7 @@
 # Causal Depthwise Conv1d
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Medium](../assets/common/difficulty_medium.svg)
@@ -60,10 +62,13 @@ With `B` = 1, `L` = 4, `D` = 2, `K` = 3:
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/causal-depthwise-conv1d)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

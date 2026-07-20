@@ -1,5 +1,7 @@
 # Count 2D Array Element
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Medium](../assets/common/difficulty_medium.svg)
@@ -42,10 +44,13 @@ Write a GPU program that counts the number of elements with the integer value k 
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/count-2d-array-element)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

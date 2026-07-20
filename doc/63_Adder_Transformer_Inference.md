@@ -1,5 +1,7 @@
 # Adder Transformer Inference
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Medium](../assets/common/difficulty_medium.svg)
@@ -143,10 +145,13 @@ With `batch_size` = 2 and pairs (3, 5), (99, 1):
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/adder-transformer-inference)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

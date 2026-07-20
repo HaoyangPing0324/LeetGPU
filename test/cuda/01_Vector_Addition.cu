@@ -45,6 +45,7 @@ private:
 };
 
 static bool run_correctness_case(int n) {
+    // ==================== 核心正确性测试开始 ====================
     const size_t count = static_cast<size_t>(n);
     const size_t bytes = count * sizeof(float);
     std::vector<float> a(count);
@@ -94,10 +95,12 @@ static bool run_correctness_case(int n) {
     }
 
     std::cout << "[PASS] vector_add correctness N=" << n << '\n';
+    // ==================== 核心正确性测试结束 ====================
     return true;
 }
 
 static bool run_performance_test() {
+    // ==================== 核心性能测试开始 ====================
     constexpr int n = 25000000;
     constexpr int warmup_iterations = 3;
     constexpr int measured_iterations = 20;
@@ -172,6 +175,7 @@ static bool run_performance_test() {
               << ", max=" << maximum_ms << " ms"
               << ", min=" << minimum_ms << " ms"
               << ", effective bandwidth=" << effective_bandwidth_gbs << " GB/s\n";
+    // ==================== 核心性能测试结束 ====================
     return true;
 }
 
@@ -197,3 +201,68 @@ int main() {
                           : "FAIL: vector_add test suite\n");
     return success ? 0 : 1;
 }
+/*
+
+#include <cuda_runtime.h>
+
+#include <array>
+#include <cmath>
+#include <iostream>
+
+extern "C" void solve(const float* a, const float* b, float* c, int n);
+
+int main() {
+    constexpr int n = 4;
+    const std::array<float, n> input_a = {1.0f, 2.0f, 3.0f, 4.0f};
+    const std::array<float, n> input_b = {5.0f, 6.0f, 7.0f, 8.0f};
+    const std::array<float, n> expected = {6.0f, 8.0f, 10.0f, 12.0f};
+    std::array<float, n> actual = {};
+    constexpr size_t bytes = n * sizeof(float);
+
+    float* device_a = nullptr;
+    float* device_b = nullptr;
+    float* device_c = nullptr;
+
+    auto check_cuda = [](cudaError_t status, const char* operation) {
+        if (status == cudaSuccess) {
+            return true;
+        }
+        std::cerr << "Test failed. CUDA error in " << operation << ": "
+                  << cudaGetErrorString(status) << '\n';
+        return false;
+    };
+
+    bool success = check_cuda(cudaMalloc(&device_a, bytes), "cudaMalloc(device_a)") &&
+                   check_cuda(cudaMalloc(&device_b, bytes), "cudaMalloc(device_b)") &&
+                   check_cuda(cudaMalloc(&device_c, bytes), "cudaMalloc(device_c)") &&
+                   check_cuda(cudaMemcpy(device_a, input_a.data(), bytes, cudaMemcpyHostToDevice), "copy input_a") &&
+                   check_cuda(cudaMemcpy(device_b, input_b.data(), bytes, cudaMemcpyHostToDevice), "copy input_b");
+
+    if (success) {
+        solve(device_a, device_b, device_c, n);
+        success = check_cuda(cudaGetLastError(), "solve") &&
+                  check_cuda(cudaDeviceSynchronize(), "synchronize") &&
+                  check_cuda(cudaMemcpy(actual.data(), device_c, bytes, cudaMemcpyDeviceToHost), "copy result");
+    }
+
+    cudaFree(device_a);
+    cudaFree(device_b);
+    cudaFree(device_c);
+
+    if (!success) {
+        return 1;
+    }
+
+    for (int index = 0; index < n; ++index) {
+        if (std::fabs(actual[index] - expected[index]) > 1e-6f) {
+            std::cerr << "Test failed at index " << index
+                      << ". Expected: " << expected[index]
+                      << ", Actual: " << actual[index] << '\n';
+            return 1;
+        }
+    }
+
+    std::cout << "Test passed.\n";
+    return 0;
+}
+*/

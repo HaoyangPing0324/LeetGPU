@@ -1,5 +1,7 @@
 # INT8 KV-Cache Attention
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Medium](../assets/common/difficulty_medium.svg)
@@ -44,10 +46,13 @@ Scores = $Q \cdot K\_float^T / \sqrt{4}$ = $\begin{bmatrix} 0.5 & 0.5 & 0.5 \end
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/int8-kv-cache-attention)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

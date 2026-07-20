@@ -1,5 +1,7 @@
 # BFS Shortest Path
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Hard](../assets/common/difficulty_hard.svg)
@@ -66,10 +68,13 @@ Implement a program that finds the shortest path in an unweighted 2D grid using 
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/bfs-shortest-path)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

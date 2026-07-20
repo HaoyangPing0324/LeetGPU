@@ -1,5 +1,7 @@
 # RGB to Grayscale
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Easy](../assets/common/difficulty_easy.svg)
@@ -45,10 +47,13 @@ The input array `input` contains `height × width × 3` elements, where the RGB 
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/rgb-to-grayscale)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

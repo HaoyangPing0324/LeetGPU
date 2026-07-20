@@ -1,5 +1,7 @@
 # 1D Convolution
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Easy](../assets/common/difficulty_easy.svg)
@@ -54,10 +56,13 @@ where $i$ ranges from 0 to $input\_size - kernel\_size$.
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/1d-convolution)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

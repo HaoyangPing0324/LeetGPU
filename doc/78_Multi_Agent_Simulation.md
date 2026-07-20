@@ -1,5 +1,7 @@
 # Multi-Agent Simulation
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Hard](../assets/common/difficulty_hard.svg)
@@ -58,10 +60,13 @@ The total array size is `4 * N` floats, with agent $i$'s data stored at indices 
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/multi-agent-simulation)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

@@ -1,5 +1,7 @@
 # LoRA Linear
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Medium](../assets/common/difficulty_medium.svg)
@@ -42,10 +44,13 @@ $$ \text{output} = x W^T + 0.5 \cdot (x A^T) B^T = \begin{bmatrix} 1 & 0 & -1 \\
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/lora-linear)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

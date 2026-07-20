@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-IMPLEMENTATION="cute_dsl"
-DISPLAY_NAME="CuTe DSL"
+IMPLEMENTATION="pytorch"
+DISPLAY_NAME="PyTorch"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/.env"
 
@@ -38,7 +38,7 @@ timestamp="$(date +%Y%m%d_%H%M%S)"; execution_time="$(date '+%Y-%m-%d %H:%M:%S %
 remote_dir="${REMOTE_ROOT}/${problem}_${run_id}"; remote_dir_win="${remote_dir//\//\\}"
 result_dir="$PROJECT_DIR/result/$IMPLEMENTATION"; result_file="$result_dir/${problem}.txt"; summary_file="$result_dir/history.md"
 mkdir -p "$result_dir"
-if [[ ! -s "$summary_file" ]]; then printf '# CuTe DSL Run History\n\n| Execution Time | Problem | Platform | Status | Average | Maximum | Minimum |\n| --- | --- | --- | :---: | ---: | ---: | ---: |\n' > "$summary_file"; fi
+if [[ ! -s "$summary_file" ]]; then printf '# PyTorch Run History\n\n| Execution Time | Problem | Platform | Status | Average | Maximum | Minimum |\n| --- | --- | --- | :---: | ---: | ---: | ---: |\n' > "$summary_file"; fi
 
 cleanup_remote() {
     if [[ "$REMOTE_OS" == "windows" ]]; then
@@ -74,8 +74,10 @@ perf_line="$(tr -d '\r' < "$result_file" | awk '/^\[PERF\]/{line=$0} END{print l
 average="N/A"; maximum="N/A"; minimum="N/A"
 platform="$(tr -d '\r' < "$result_file" | awk '/^=== GPU ===/{getline; sub(/,.*/, ""); print; exit}')"
 [[ -n "$platform" ]] || platform="N/A"
-[[ "$perf_line" =~ avg=([0-9]+([.][0-9]+)?)[[:space:]]ms ]] && average="${BASH_REMATCH[1]} ms"
-[[ "$perf_line" =~ max=([0-9]+([.][0-9]+)?)[[:space:]]ms ]] && maximum="${BASH_REMATCH[1]} ms"
-[[ "$perf_line" =~ min=([0-9]+([.][0-9]+)?)[[:space:]]ms ]] && minimum="${BASH_REMATCH[1]} ms"
+if [[ -n "$perf_line" ]]; then
+    [[ "$perf_line" =~ avg=([0-9]+([.][0-9]+)?)[[:space:]]ms ]] && average="${BASH_REMATCH[1]} ms"
+    [[ "$perf_line" =~ max=([0-9]+([.][0-9]+)?)[[:space:]]ms ]] && maximum="${BASH_REMATCH[1]} ms"
+    [[ "$perf_line" =~ min=([0-9]+([.][0-9]+)?)[[:space:]]ms ]] && minimum="${BASH_REMATCH[1]} ms"
+fi
 printf '| %s | `%s` | %s | **%s** | %s | %s | %s |\n' "$execution_time" "$problem" "$platform" "$status" "$average" "$maximum" "$minimum" >> "$summary_file"
 [[ "$status" == "PASS" ]]

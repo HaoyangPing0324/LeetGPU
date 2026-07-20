@@ -1,5 +1,7 @@
 # 2D FFT
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Medium](../assets/common/difficulty_medium.svg)
@@ -35,10 +37,13 @@ Spectrum $X[k, l]$ (real part): $$ \begin{bmatrix} 1.0 & 1.0 \\ 1.0 & 1.0 \end{b
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/2d-fft)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

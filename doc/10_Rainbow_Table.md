@@ -1,5 +1,7 @@
 # Rainbow Table
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Easy](../assets/common/difficulty_easy.svg)
@@ -39,10 +41,13 @@ Implement a program that performs `R` rounds of parallel hashing on an array of 
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/rainbow-table)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

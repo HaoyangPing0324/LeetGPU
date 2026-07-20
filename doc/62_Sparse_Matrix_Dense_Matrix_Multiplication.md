@@ -1,5 +1,7 @@
 # Sparse Matrix-Dense Matrix Multiplication
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Medium](../assets/common/difficulty_medium.svg)
@@ -37,10 +39,13 @@ Matrix $C$ ($3 \times 2$): $$ \begin{bmatrix} 9.0 & 12.0 \\ 9.0 & 12.0 \\ 20.0 &
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/sparse-matrix-dense-matrix-multiplication)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

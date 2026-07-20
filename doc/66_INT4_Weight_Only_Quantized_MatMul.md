@@ -1,5 +1,7 @@
 # INT4 Weight-Only Quantized MatMul
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Medium](../assets/common/difficulty_medium.svg)
@@ -45,10 +47,13 @@ Activations $x$ (float16, $2 \times 4$): $$ \begin{bmatrix} 1.0 & 0.0 & 1.0 & 0.
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/int4-weight-only-quantized-matmul)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

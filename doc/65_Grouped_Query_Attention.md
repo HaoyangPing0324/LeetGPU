@@ -1,5 +1,7 @@
 # Grouped Query Attention
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Medium](../assets/common/difficulty_medium.svg)
@@ -45,10 +47,13 @@ $\text{output}_0$ (3×4): $$ \begin{bmatrix} 5.71 & 6.71 & 7.71 & 8.71 \\ 5.71 &
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/grouped-query-attention)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

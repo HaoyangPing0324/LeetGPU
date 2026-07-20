@@ -1,13 +1,13 @@
 # LeetGPU Practice Project
 
-A structured workspace for organizing and solving [LeetGPU challenges](https://leetgpu.com/challenges) with CUDA, Triton, and CuTe DSL.
+A structured workspace for organizing and solving [LeetGPU challenges](https://leetgpu.com/challenges) with PyTorch, CUDA, and Triton.
 
 ## Challenge Progress
 
-| Problem | Difficulty | CUDA | Triton | CuTe DSL |
+| Problem | Difficulty | PyTorch | CUDA | Triton |
 | --- | :---: | :---: | :---: | :---: |
-| [01. Vector Addition](https://leetgpu.com/challenges/vector-addition) | ![Easy](assets/common/difficulty_easy.svg) | ![Completed](assets/common/completed.svg) |  |  |
-| [02. Matrix Multiplication](https://leetgpu.com/challenges/matrix-multiplication) | ![Easy](assets/common/difficulty_easy.svg) | ![Completed](assets/common/completed.svg) |  |  |
+| [01. Vector Addition](https://leetgpu.com/challenges/vector-addition) | ![Easy](assets/common/difficulty_easy.svg) | ![Completed](assets/common/completed.svg) | ![Completed](assets/common/completed.svg) | ![Completed](assets/common/completed.svg) |
+| [02. Matrix Multiplication](https://leetgpu.com/challenges/matrix-multiplication) | ![Easy](assets/common/difficulty_easy.svg) |  | ![Completed](assets/common/completed.svg) |  |
 | [03. Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) | ![Easy](assets/common/difficulty_easy.svg) |  |  |  |
 | [04. Color Inversion](https://leetgpu.com/challenges/color-inversion) | ![Easy](assets/common/difficulty_easy.svg) |  |  |  |
 | [05. Matrix Addition](https://leetgpu.com/challenges/matrix-addition) | ![Easy](assets/common/difficulty_easy.svg) |  |  |  |
@@ -107,18 +107,18 @@ LeetGPU/
 ├── src/
 │   ├── cuda/
 │   ├── triton/
-│   └── cute_dsl/
+│   └── pytorch/
 ├── test/
 │   ├── cuda/
 │   ├── triton/
-│   └── cute_dsl/
+│   └── pytorch/
 ├── result/
 │   ├── cuda/
 │   │   ├── history.md
 │   │   └── <problem_name>.txt
 │   ├── triton/
 │   │   └── history.md
-│   └── cute_dsl/
+│   └── pytorch/
 │       └── history.md
 ├── doc/
 ├── scripts/
@@ -127,15 +127,15 @@ LeetGPU/
 │   ├── run_cuda_remote.ps1
 │   ├── run_triton_remote.sh
 │   ├── run_triton_remote.ps1
-│   ├── run_cute_dsl_remote.sh
-│   └── run_cute_dsl_remote.ps1
+│   ├── run_pytorch_remote.sh
+│   └── run_pytorch_remote.ps1
 ├── .gitignore
 └── README.md
 ```
 
 - `assets/`: Images and other resources used by challenge descriptions.
 - `problems/`: Challenge descriptions from LeetGPU.
-- `src/`: Implementations written in CUDA, Triton, and CuTe DSL.
+- `src/`: Implementations written in PyTorch, CUDA, and Triton.
 - `test/`: Test code for validating each implementation.
 - `result/`: Independent run outputs and execution history for each implementation.
 - `doc/`: Shared solution documents for each challenge.
@@ -166,17 +166,17 @@ Complete the environment setup before running a script. Pass the problem name as
 Linux client:
 
 ```bash
+bash scripts/run_pytorch_remote.sh <problem_name>
 bash scripts/run_cuda_remote.sh <problem_name>
 bash scripts/run_triton_remote.sh <problem_name>
-bash scripts/run_cute_dsl_remote.sh <problem_name>
 ```
 
 Windows PowerShell client:
 
 ```powershell
+.\scripts\run_pytorch_remote.ps1 <problem_name>
 .\scripts\run_cuda_remote.ps1 <problem_name>
 .\scripts\run_triton_remote.ps1 <problem_name>
-.\scripts\run_cute_dsl_remote.ps1 <problem_name>
 ```
 
 The scripts support all four client/server operating-system combinations:

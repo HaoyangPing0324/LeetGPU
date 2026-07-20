@@ -1,5 +1,7 @@
 # General Matrix Multiplication (GEMM)
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Medium](../assets/common/difficulty_medium.svg)
@@ -43,10 +45,13 @@ Matrix $C$ ($M=2, N=2$): $$ \begin{bmatrix} 22.0 & 28.0 \\ 49.0 & 64.0 \end{bmat
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/general-matrix-multiplication-gemm)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

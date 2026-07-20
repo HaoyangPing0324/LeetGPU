@@ -1,5 +1,7 @@
 # All-Pairs Shortest Paths
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Hard](../assets/common/difficulty_hard.svg)
@@ -56,10 +58,13 @@ $$ \text{output}\[i\]\[j\] = \min\\\bigl(\text{output}\[i\]\[j\],\\ \text{output
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/all-pairs-shortest-paths)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

@@ -121,8 +121,10 @@ perf_line="$(tr -d '\r' < "$result_file" | awk '/^\[PERF\]/{line=$0} END{print l
 average="N/A"; maximum="N/A"; minimum="N/A"
 platform="$(tr -d '\r' < "$result_file" | awk '/^=== GPU ===/{getline; sub(/,.*/, ""); print; exit}')"
 [[ -n "$platform" ]] || platform="N/A"
-[[ "$perf_line" =~ avg=([0-9]+([.][0-9]+)?)[[:space:]]ms ]] && average="${BASH_REMATCH[1]} ms"
-[[ "$perf_line" =~ max=([0-9]+([.][0-9]+)?)[[:space:]]ms ]] && maximum="${BASH_REMATCH[1]} ms"
-[[ "$perf_line" =~ min=([0-9]+([.][0-9]+)?)[[:space:]]ms ]] && minimum="${BASH_REMATCH[1]} ms"
+if [[ -n "$perf_line" ]]; then
+    [[ "$perf_line" =~ avg=([0-9]+([.][0-9]+)?)[[:space:]]ms ]] && average="${BASH_REMATCH[1]} ms"
+    [[ "$perf_line" =~ max=([0-9]+([.][0-9]+)?)[[:space:]]ms ]] && maximum="${BASH_REMATCH[1]} ms"
+    [[ "$perf_line" =~ min=([0-9]+([.][0-9]+)?)[[:space:]]ms ]] && minimum="${BASH_REMATCH[1]} ms"
+fi
 printf '| %s | `%s` | %s | **%s** | %s | %s | %s |\n' "$execution_time" "$problem" "$platform" "$status" "$average" "$maximum" "$minimum" >> "$summary_file"
 [[ "$status" == "PASS" ]]

@@ -1,5 +1,7 @@
 # Sigmoid Linear Unit
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Easy](../assets/common/difficulty_easy.svg)
@@ -40,10 +42,13 @@ SiLU is defined as: $$ \begin{align} \sigma(x) &= \frac{1}{1 + e^{-x}} \\ \text{
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/sigmoid-linear-unit)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.

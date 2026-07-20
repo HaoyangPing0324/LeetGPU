@@ -189,9 +189,11 @@ for ($Index = 0; $Index -lt $Lines.Count - 1; $Index++) {
 }
 $Average = "N/A"; $Maximum = "N/A"; $Minimum = "N/A"
 $PerfLine = $Lines | Where-Object { $_ -match '^\[PERF\]' } | Select-Object -Last 1
-if ($PerfLine -match 'avg=([0-9]+(?:\.[0-9]+)?)\s*ms') { $Average = "$($Matches[1]) ms" }
-if ($PerfLine -match 'max=([0-9]+(?:\.[0-9]+)?)\s*ms') { $Maximum = "$($Matches[1]) ms" }
-if ($PerfLine -match 'min=([0-9]+(?:\.[0-9]+)?)\s*ms') { $Minimum = "$($Matches[1]) ms" }
+if ($null -ne $PerfLine) {
+    if ($PerfLine -match 'avg=([0-9]+(?:\.[0-9]+)?)\s*ms') { $Average = "$($Matches[1]) ms" }
+    if ($PerfLine -match 'max=([0-9]+(?:\.[0-9]+)?)\s*ms') { $Maximum = "$($Matches[1]) ms" }
+    if ($PerfLine -match 'min=([0-9]+(?:\.[0-9]+)?)\s*ms') { $Minimum = "$($Matches[1]) ms" }
+}
 Add-Content -LiteralPath $SummaryFile -Value "| $ExecutionTime | ``$Problem`` | $Platform | **$Status** | $Average | $Maximum | $Minimum |"
 
 if ($Status -ne "PASS") { exit 1 }

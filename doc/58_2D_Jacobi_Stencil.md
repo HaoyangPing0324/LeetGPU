@@ -1,5 +1,7 @@
 # 2D Jacobi Stencil
 
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
+
 ## Problem Description
 
 ![Difficulty: Medium](../assets/common/difficulty_medium.svg)
@@ -39,10 +41,13 @@ Interior cell $(2,2)$: $0.25 \times (\text{input}[1,2] + \text{input}[3,2] + \te
 
 > To be developed.
 
-## CuTe DSL
+
+## PyTorch
 
 > To be developed.
 
 ## References
 
 - [LeetGPU Challenge](https://leetgpu.com/challenges/2d-jacobi-stencil)
+
+> Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
