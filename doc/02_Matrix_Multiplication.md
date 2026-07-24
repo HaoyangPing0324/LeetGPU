@@ -475,8 +475,20 @@ Vectorization reduces the number of memory instructions, but it does not reduce 
 ```cuda
 #include <cuda_runtime.h>
 
+#ifndef MATMUL_V2_BM
+#define MATMUL_V2_BM 64
+#endif
+#ifndef MATMUL_V2_BN
+#define MATMUL_V2_BN 64
+#endif
 #ifndef MATMUL_V2_BK
 #define MATMUL_V2_BK 32
+#endif
+#ifndef MATMUL_V2_TM
+#define MATMUL_V2_TM 8
+#endif
+#ifndef MATMUL_V2_TN
+#define MATMUL_V2_TN 4
 #endif
 
 __global__ void scalar_fallback(const float* A, const float* B, float* C,
@@ -491,8 +503,9 @@ __global__ void scalar_fallback(const float* A, const float* B, float* C,
     C[row * K + col] = sum;
 }
 
-template <int BM = 64, int BN = 64, int BK = MATMUL_V2_BK,
-          int TM = 8, int TN = 4>
+template <int BM = MATMUL_V2_BM, int BN = MATMUL_V2_BN,
+          int BK = MATMUL_V2_BK, int TM = MATMUL_V2_TM,
+          int TN = MATMUL_V2_TN>
 __global__ void matrix_multiplication_v2(const float* __restrict__ A,
                                          const float* __restrict__ B,
                                          float* __restrict__ C,
@@ -568,8 +581,9 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
         const dim3 grid((K + 15) / 16, (M + 15) / 16);
         scalar_fallback<<<grid, block>>>(A, B, C, M, N, K);
     } else {
-        constexpr int BM = 64, BN = 64, BK = MATMUL_V2_BK;
-        constexpr int TM = 8, TN = 4;
+        constexpr int BM = MATMUL_V2_BM, BN = MATMUL_V2_BN;
+        constexpr int BK = MATMUL_V2_BK, TM = MATMUL_V2_TM;
+        constexpr int TN = MATMUL_V2_TN;
         const dim3 block(BN / TN, BM / TM);
         const dim3 grid((K + BN - 1) / BN, (M + BM - 1) / BM);
         matrix_multiplication_v2<BM, BN, BK, TM, TN>
@@ -609,9 +623,38 @@ The matched configuration separates the effect of reduction-tile depth from the 
 | NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 38.951 ms | 36.741 ms | 41.201 ms | 10585.661 GFLOPS |
 | NVIDIA GeForce RTX 4090 | PASS | 11.035 ms | 10.414 ms | 11.805 ms | 37364.875 GFLOPS |
 
-### V3: Register Prefetch and Double-Buffered Shared Memory
+### V2 Control: Vectorized Single Buffer (`128 x 128`)
 
 #### Approach
+
+This control keeps the V2 single-buffered algorithm and changes only the compile-time tile parameters to `BM = 128`, `BN = 128`, and `BK = 16`. The per-thread `8 x 4` micro-tile, `float4` transfers, scalar boundary fallback, and accumulation logic remain unchanged.
+
+The block grows from 128 to 512 threads and produces four times as many output elements, but the larger tile does not improve this single-buffered kernel. It is slower than the matched `64 x 64`, `BK = 16` control on both tested GPUs. The extra block-level reuse is therefore insufficient by itself to offset the larger block's scheduling and resource costs.
+
+#### Solution
+
+```cuda
+#define MATMUL_V2_BM 128
+#define MATMUL_V2_BN 128
+#define MATMUL_V2_BK 16
+#define MATMUL_V2_TM 8
+#define MATMUL_V2_TN 4
+
+#include "02_Matrix_Multiplication_v2_vectorized.cu"
+```
+
+#### Test Result
+
+| Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
+|---|:---:|---:|---:|---:|---:|
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 44.230 ms | 42.647 ms | 47.437 ms | 9322.085 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | 12.730 ms | 12.409 ms | 13.177 ms | 32389.696 GFLOPS |
+
+### V3: Register Prefetch and Double-Buffered Shared Memory
+
+#### Base `64 x 64` Configuration
+
+##### Approach
 
 V3 uses:
 
@@ -644,7 +687,7 @@ This is software double buffering with register prefetch, not an asynchronous `c
 
 Double buffering is not automatically faster. It doubles shared-memory storage and adds prefetch registers, control flow, a pipeline prologue, and an epilogue. Those costs can reduce occupancy or offset hidden latency. In the measured workload, V3 is slightly slower than V2 on both tested GPUs, so the document reports it as a verified optimization experiment rather than claiming an improvement that was not observed.
 
-#### Solution
+##### Solution
 
 ```cuda
 #include <cuda_runtime.h>
@@ -819,18 +862,18 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 #endif
 ```
 
-#### Test Result
+##### Test Result
 
 | Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
 |---|:---:|---:|---:|---:|---:|
 | NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 39.856 ms | 38.156 ms | 41.806 ms | 10345.265 GFLOPS |
 | NVIDIA GeForce RTX 4090 | PASS | 12.214 ms | 11.304 ms | 12.783 ms | 33758.222 GFLOPS |
 
-### V4: `128 x 128` Output Tile
+#### Large-Tile `128 x 128` Configuration
 
-#### Approach
+##### Approach
 
-V4 changes the compile-time parameters to:
+The large-tile configuration changes V3's compile-time parameters to:
 
 ```text
 BM = 128
@@ -846,11 +889,11 @@ The block contains `(128 / 4) x (128 / 8) = 32 x 16 = 512` threads. Each thread 
 2 * (128 * 16 + 16 * 128) * sizeof(float)
 ```
 
-The larger output tile increases block-level reuse and amortizes input-tile loads across more output elements, while retaining V3's register-prefetch and double-buffer structure. It also raises the block thread count and changes register demand, occupancy, and scheduling, so the result must be measured rather than assumed.
+The larger output tile increases block-level reuse and amortizes input-tile loads across more output elements, while retaining exactly the same register-prefetch and double-buffer mechanism as the base V3 configuration. It also raises the block thread count and changes register demand, occupancy, and scheduling, so it is a parameter configuration of V3 rather than a separate optimization principle.
 
-Under the revised benchmark—deterministic nonzero inputs, five warm-up iterations, and ten measured iterations—V4 is the fastest project CUDA version on both tested GPUs. It is therefore selected as the default without any device-name dispatch. This does not mean that a `128 x 128` tile is universally optimal; it means that V4 is the strongest verified common default among the implementations currently in this project.
+Under the revised benchmark, this configuration is the fastest project CUDA implementation on both tested GPUs. However, the matched single-buffered experiment becomes slower when enlarged to the same `128 x 128` tile. The gain therefore does not come from tile size alone: it appears only when the larger output tile is combined with this double-buffered data path. The measurement establishes an interaction between the two choices, not a universal rule that larger tiles are faster.
 
-#### Solution
+##### Solution
 
 ```cuda
 #define MATMUL_BM 128
@@ -862,12 +905,25 @@ Under the revised benchmark—deterministic nonzero inputs, five warm-up iterati
 #include "02_Matrix_Multiplication_v3_double_buffered.cu"
 ```
 
-#### Test Result
+##### Test Result
 
 | Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
 |---|:---:|---:|---:|---:|---:|
 | NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 32.567 ms | 30.380 ms | 34.811 ms | 12660.545 GFLOPS |
 | NVIDIA GeForce RTX 4090 | PASS | 10.284 ms | 9.941 ms | 10.721 ms | 40094.689 GFLOPS |
+
+#### Controlled Comparison
+
+All four rows below use `BK = 16`, an `8 x 4` per-thread micro-tile, deterministic nonzero inputs, five warm-up iterations, and ten measured iterations.
+
+| Buffering | Output Tile | RTX 5070 Ti Laptop GPU | RTX 4090 |
+|---|---:|---:|---:|
+| Single buffer | `64 x 64` | 38.951 ms | 11.035 ms |
+| Single buffer | `128 x 128` | 44.230 ms | 12.730 ms |
+| Double buffer | `64 x 64` | 39.856 ms | 12.214 ms |
+| Double buffer | `128 x 128` | **32.567 ms** | **10.284 ms** |
+
+At `64 x 64`, double buffering is slower than the matched single-buffered kernel. At `128 x 128`, the result reverses: the double-buffered configuration is substantially faster than the single-buffered large tile and also faster than both small-tile configurations. Consequently, neither double buffering nor tile enlargement is independently beneficial in these measurements. Their combination is the configuration that delivers the observed acceleration.
 
 ### Test Methodology
 

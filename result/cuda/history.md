@@ -83,3 +83,5 @@
 | 2026-07-25 05:02:14 CST | `02_Matrix_Multiplication` | `v4_large_tile` | NVIDIA GeForce RTX 5070 Ti Laptop GPU | **PASS** | M=8192, N=6144, K=4096 | 10 | 32.258 ms | 34.764 ms | 29.824 ms | 12781.838 GFLOPS |
 | 2026-07-25 05:05:25 CST | `02_Matrix_Multiplication` | `default` | NVIDIA GeForce RTX 4090 | **PASS** | M=8192, N=6144, K=4096 | 10 | 10.284 ms | 10.721 ms | 9.941 ms | 40094.689 GFLOPS |
 | 2026-07-25 05:05:57 CST | `02_Matrix_Multiplication` | `default` | NVIDIA GeForce RTX 5070 Ti Laptop GPU | **PASS** | M=8192, N=6144, K=4096 | 10 | 32.567 ms | 34.811 ms | 30.380 ms | 12660.545 GFLOPS |
+| 2026-07-25 05:13:57 CST | `02_Matrix_Multiplication` | `v2_vectorized_large_tile` | NVIDIA GeForce RTX 4090 | **PASS** | M=8192, N=6144, K=4096 | 10 | 12.730 ms | 13.177 ms | 12.409 ms | 32389.696 GFLOPS |
+| 2026-07-25 05:14:22 CST | `02_Matrix_Multiplication` | `v2_vectorized_large_tile` | NVIDIA GeForce RTX 5070 Ti Laptop GPU | **PASS** | M=8192, N=6144, K=4096 | 10 | 44.230 ms | 47.437 ms | 42.647 ms | 9322.085 GFLOPS |

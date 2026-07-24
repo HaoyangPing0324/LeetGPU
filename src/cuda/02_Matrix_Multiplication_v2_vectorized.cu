@@ -1,7 +1,19 @@
 #include <cuda_runtime.h>
 
+#ifndef MATMUL_V2_BM
+#define MATMUL_V2_BM 64
+#endif
+#ifndef MATMUL_V2_BN
+#define MATMUL_V2_BN 64
+#endif
 #ifndef MATMUL_V2_BK
 #define MATMUL_V2_BK 32
+#endif
+#ifndef MATMUL_V2_TM
+#define MATMUL_V2_TM 8
+#endif
+#ifndef MATMUL_V2_TN
+#define MATMUL_V2_TN 4
 #endif
 
 __global__ void scalar_fallback(const float* A, const float* B, float* C,
@@ -16,8 +28,9 @@ __global__ void scalar_fallback(const float* A, const float* B, float* C,
     C[row * K + col] = sum;
 }
 
-template <int BM = 64, int BN = 64, int BK = MATMUL_V2_BK,
-          int TM = 8, int TN = 4>
+template <int BM = MATMUL_V2_BM, int BN = MATMUL_V2_BN,
+          int BK = MATMUL_V2_BK, int TM = MATMUL_V2_TM,
+          int TN = MATMUL_V2_TN>
 __global__ void matrix_multiplication_v2(const float* __restrict__ A,
                                          const float* __restrict__ B,
                                          float* __restrict__ C,
@@ -93,8 +106,9 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
         const dim3 grid((K + 15) / 16, (M + 15) / 16);
         scalar_fallback<<<grid, block>>>(A, B, C, M, N, K);
     } else {
-        constexpr int BM = 64, BN = 64, BK = MATMUL_V2_BK;
-        constexpr int TM = 8, TN = 4;
+        constexpr int BM = MATMUL_V2_BM, BN = MATMUL_V2_BN;
+        constexpr int BK = MATMUL_V2_BK, TM = MATMUL_V2_TM;
+        constexpr int TN = MATMUL_V2_TN;
         const dim3 block(BN / TN, BM / TM);
         const dim3 grid((K + BN - 1) / BN, (M + BM - 1) / BM);
         matrix_multiplication_v2<BM, BN, BK, TM, TN>
