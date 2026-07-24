@@ -7,4 +7,6 @@
 // #include "02_Matrix_Multiplication_v2_vectorized_bk16.cu"
 // #include "02_Matrix_Multiplication_v2_vectorized_large_tile.cu"
 // #include "02_Matrix_Multiplication_v3_double_buffered.cu"
+// #include "02_Matrix_Multiplication_v4_cp_async.cu"
+// #include "02_Matrix_Multiplication_v5_wmma_tf32.cu"
 #include "02_Matrix_Multiplication_v3_large_tile.cu"

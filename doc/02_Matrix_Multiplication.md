@@ -162,13 +162,6 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 }
 ```
 
-#### Test Result
-
-| Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
-|---|:---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 370.411 ms | 333.271 ms | 440.430 ms | 1113.135 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | 83.201 ms | 82.706 ms | 83.467 ms | 4955.654 GFLOPS |
-
 ### V1: Original `16 x 16` Shared-Memory Tiling
 
 #### Approach
@@ -236,13 +229,6 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
     matrix_multiplication_kernel<<<blocksPerGrid, threadsPerBlock>>>(A, B, C, M, N, K);
 }
 ```
-
-#### Test Result
-
-| Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
-|---|:---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 253.695 ms | 223.976 ms | 306.542 ms | 1625.249 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | 59.247 ms | 58.716 ms | 60.184 ms | 6959.313 GFLOPS |
 
 ### V1: One-Dimensional Thread Tiling
 
@@ -333,13 +319,6 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
     matrix_multiplication_v1_1d<BM, BN, BK, TM><<<grid, block>>>(A, B, C, M, N, K);
 }
 ```
-
-#### Test Result
-
-| Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
-|---|:---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 81.154 ms | 67.253 ms | 105.337 ms | 5080.654 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | 19.415 ms | 19.372 ms | 19.487 ms | 21237.378 GFLOPS |
 
 ### V1: Two-Dimensional Thread Tiling
 
@@ -441,13 +420,6 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
     matrix_multiplication_v1_2d<BM, BN, BK, TM, TN><<<grid, block>>>(A, B, C, M, N, K);
 }
 ```
-
-#### Test Result
-
-| Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
-|---|:---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 54.954 ms | 46.046 ms | 74.808 ms | 7502.970 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | 13.560 ms | 13.360 ms | 13.786 ms | 30406.969 GFLOPS |
 
 ### V2: Vectorized `float4` Transfers (`BK = 32`)
 
@@ -588,13 +560,6 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 }
 ```
 
-#### Test Result
-
-| Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
-|---|:---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 39.486 ms | 36.339 ms | 45.050 ms | 10442.033 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | 11.412 ms | 11.183 ms | 11.631 ms | 36131.138 GFLOPS |
-
 ### V2 Control: Vectorized Single Buffer (`BK = 16`)
 
 #### Approach
@@ -610,13 +575,6 @@ The matched configuration separates the effect of reduction-tile depth from the 
 
 #include "02_Matrix_Multiplication_v2_vectorized.cu"
 ```
-
-#### Test Result
-
-| Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
-|---|:---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 40.241 ms | 37.494 ms | 44.580 ms | 10246.190 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | 11.004 ms | 10.156 ms | 11.589 ms | 37470.392 GFLOPS |
 
 ### V2 Control: Vectorized Single Buffer (`128 x 128`)
 
@@ -637,13 +595,6 @@ The block grows from 128 to 512 threads and produces four times as many output e
 
 #include "02_Matrix_Multiplication_v2_vectorized.cu"
 ```
-
-#### Test Result
-
-| Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
-|---|:---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 45.082 ms | 42.618 ms | 47.103 ms | 9145.932 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | 12.735 ms | 12.387 ms | 13.171 ms | 32376.516 GFLOPS |
 
 ### V3: Register Prefetch and Double-Buffered Shared Memory
 
@@ -856,13 +807,6 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 #endif
 ```
 
-##### Test Result
-
-| Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
-|---|:---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 40.441 ms | 38.539 ms | 43.165 ms | 10195.625 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | 10.737 ms | 8.714 ms | 11.663 ms | 38399.761 GFLOPS |
-
 #### Large-Tile `128 x 128` Configuration
 
 ##### Approach
@@ -899,23 +843,16 @@ Under the revised benchmark, this configuration is the fastest project CUDA impl
 #include "02_Matrix_Multiplication_v3_double_buffered.cu"
 ```
 
-##### Test Result
-
-| Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
-|---|:---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 32.366 ms | 29.716 ms | 35.650 ms | 12739.032 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | 10.399 ms | 10.008 ms | 10.715 ms | 39651.122 GFLOPS |
-
 #### Controlled Comparison
 
 All four rows below use `BK = 16`, an `8 x 4` per-thread micro-tile, deterministic nonzero inputs, five warm-up iterations, and ten measured iterations.
 
 | Buffering | Output Tile | RTX 5070 Ti Laptop GPU | RTX 4090 |
 |---|---:|---:|---:|
-| Single buffer | `64 x 64` | 40.241 ms | 11.004 ms |
-| Single buffer | `128 x 128` | 45.082 ms | 12.735 ms |
-| Double buffer | `64 x 64` | 40.441 ms | 10.737 ms |
-| Double buffer | `128 x 128` | **32.366 ms** | **10.399 ms** |
+| Single buffer | `64 x 64` | 38.761 ms | 11.314 ms |
+| Single buffer | `128 x 128` | 38.842 ms | 13.146 ms |
+| Double buffer | `64 x 64` | 39.642 ms | 11.514 ms |
+| Double buffer | `128 x 128` | **34.590 ms** | **10.052 ms** |
 
 At `64 x 64`, double buffering has only a small and platform-dependent effect: it is slightly faster on the RTX 4090 and slightly slower on the RTX 5070 Ti Laptop GPU. Enlarging the single-buffered kernel to `128 x 128` is slower on both GPUs. In contrast, the `128 x 128` double-buffered configuration is substantially faster than the single-buffered large tile and is the fastest common configuration in the table. The measured acceleration therefore comes from the interaction between the larger output tile and the double-buffered data path, not from a universal rule that either choice is independently faster.
 
@@ -930,11 +867,388 @@ The following compiler resource report was produced with `nvcc -O2 -arch=sm_89 -
 
 The report confirms the resource trade-off. The single-buffered large tile keeps the same 86 registers per thread but quadruples the thread count, so its register allocation per block grows from 11,008 to 44,032 registers. The base double-buffered kernel raises register use to 122 per thread because of prefetch state. For the large double-buffered instantiation, the compiler uses 100 registers per thread and no spills; the block performs four times as much output work while preserving the same per-thread micro-tile. These facts explain why occupancy and reuse can change sharply with the configuration, although register and shared-memory counts alone do not prove the exact runtime stall behavior.
 
+### V4: Hardware-Asynchronous `cp.async` Pipeline
+
+#### Approach
+
+V4 keeps the `128 x 128` output tile, `BK = 16`, and `8 x 4` per-thread micro-tile from the large V3 configuration, but changes how the next input tile reaches shared memory.
+
+V3 first loads global-memory values into ordinary thread registers and later stores those registers into the alternate shared-memory buffer. V4 instead issues the Ampere-or-newer PTX instruction:
+
+```text
+cp.async.cg.shared.global
+```
+
+Each instruction copies 16 bytes directly from global memory to shared memory. `cp.async.commit_group` publishes the copies issued by a thread, and `cp.async.wait_group 0` waits until all outstanding groups needed by the block are complete.
+
+The pipeline has a prologue, steady state, and epilogue:
+
+1. The prologue asynchronously fills shared buffer 0 and waits before its first use.
+2. During a steady-state iteration, the block issues copies for tile `i + 1` into the alternate buffer before computing tile `i`.
+3. The arithmetic loop reads only the current buffer, so the GPU can overlap its fused multiply-add work with the outstanding global-to-shared copies.
+4. Before the buffers exchange roles, `cp.async.wait_group 0` guarantees completion and `__syncthreads()` makes the new tile visible to every thread.
+5. The final tile has no successor, so the loop finishes without issuing another copy group.
+
+Out-of-range 16-byte vectors use the source-size operand with zero valid bytes. The hardware zero-fills the destination shared-memory vector without dereferencing an invalid global address. Inputs whose reduction or output-column dimensions are not compatible with four-float vector transfers use the scalar fallback. Devices below compute capability 8.0 also use the fallback because they do not provide `cp.async`.
+
+This is a genuine hardware-asynchronous pipeline, unlike V3's register-prefetch software pipeline. It is nevertheless not guaranteed to be faster: both versions still require synchronization when a shared buffer changes roles, and the `512`-thread block, address generation, copy-group management, and arithmetic instruction stream all compete for execution resources.
+
+#### Solution
+
+```cuda
+#include <cuda_runtime.h>
+
+namespace {
+
+constexpr int BM = 128;
+constexpr int BN = 128;
+constexpr int BK = 16;
+constexpr int TM = 8;
+constexpr int TN = 4;
+constexpr int THREADS_X = BN / TN;
+constexpr int THREADS_Y = BM / TM;
+constexpr int THREAD_COUNT = THREADS_X * THREADS_Y;
+
+__global__ void scalar_fallback_v4(const float* A, const float* B, float* C,
+                                   int M, int N, int K) {
+    const int row = blockIdx.y * blockDim.y + threadIdx.y;
+    const int col = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row >= M || col >= K) return;
+
+    float sum = 0.0f;
+    for (int inner = 0; inner < N; ++inner) {
+        sum += A[row * N + inner] * B[inner * K + col];
+    }
+    C[row * K + col] = sum;
+}
+
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 800
+__device__ __forceinline__ void cp_async_16(void* shared_destination,
+                                            const void* global_source,
+                                            int valid_bytes) {
+    const unsigned int shared_address =
+        static_cast<unsigned int>(__cvta_generic_to_shared(shared_destination));
+    asm volatile(
+        "cp.async.cg.shared.global [%0], [%1], 16, %2;\n"
+        :
+        : "r"(shared_address), "l"(global_source), "r"(valid_bytes));
+}
+
+__device__ __forceinline__ void cp_async_commit() {
+    asm volatile("cp.async.commit_group;\n" : :);
+}
+
+__device__ __forceinline__ void cp_async_wait_all() {
+    asm volatile("cp.async.wait_group 0;\n" : :);
+}
+#endif
+
+__global__ void matrix_multiplication_v4_cp_async(
+    const float* __restrict__ A,
+    const float* __restrict__ B,
+    float* __restrict__ C,
+    int M, int N, int K) {
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 800
+    __shared__ __align__(16) float shared_a[2][BM][BK];
+    __shared__ __align__(16) float shared_b[2][BK][BN];
+
+    const int tx = threadIdx.x;
+    const int ty = threadIdx.y;
+    const int tid = ty * blockDim.x + tx;
+    float accumulators[TM][TN] = {{0.0f}};
+
+    auto issue_tile = [&](int tile, int buffer) {
+        constexpr int A_VECTORS = BM * BK / 4;
+        constexpr int B_VECTORS = BK * BN / 4;
+        const int inner_base = tile * BK;
+
+        for (int vector_index = tid;
+             vector_index < A_VECTORS;
+             vector_index += THREAD_COUNT) {
+            const int element_index = vector_index * 4;
+            const int local_row = element_index / BK;
+            const int local_inner = element_index % BK;
+            const int row = blockIdx.y * BM + local_row;
+            const int inner = inner_base + local_inner;
+            const int valid_bytes = (row < M && inner + 3 < N) ? 16 : 0;
+            const float* source = A + static_cast<size_t>(row < M ? row : 0) * N +
+                                  (inner + 3 < N ? inner : 0);
+            cp_async_16(&shared_a[buffer][local_row][local_inner],
+                        source, valid_bytes);
+        }
+
+        for (int vector_index = tid;
+             vector_index < B_VECTORS;
+             vector_index += THREAD_COUNT) {
+            const int element_index = vector_index * 4;
+            const int local_inner = element_index / BN;
+            const int local_col = element_index % BN;
+            const int inner = inner_base + local_inner;
+            const int col = blockIdx.x * BN + local_col;
+            const int valid_bytes = (inner < N && col + 3 < K) ? 16 : 0;
+            const float* source = B + static_cast<size_t>(inner < N ? inner : 0) * K +
+                                  (col + 3 < K ? col : 0);
+            cp_async_16(&shared_b[buffer][local_inner][local_col],
+                        source, valid_bytes);
+        }
+        cp_async_commit();
+    };
+
+    const int tile_count = (N + BK - 1) / BK;
+    issue_tile(0, 0);
+    cp_async_wait_all();
+    __syncthreads();
+
+    int read_buffer = 0;
+    for (int tile = 0; tile < tile_count; ++tile) {
+        const bool has_next_tile = tile + 1 < tile_count;
+        if (has_next_tile) {
+            issue_tile(tile + 1, read_buffer ^ 1);
+        }
+
+        #pragma unroll
+        for (int inner = 0; inner < BK; ++inner) {
+            const float4 b = *reinterpret_cast<const float4*>(
+                &shared_b[read_buffer][inner][tx * TN]);
+            #pragma unroll
+            for (int local_row = 0; local_row < TM; ++local_row) {
+                const float a =
+                    shared_a[read_buffer][ty * TM + local_row][inner];
+                accumulators[local_row][0] += a * b.x;
+                accumulators[local_row][1] += a * b.y;
+                accumulators[local_row][2] += a * b.z;
+                accumulators[local_row][3] += a * b.w;
+            }
+        }
+
+        if (has_next_tile) {
+            cp_async_wait_all();
+            __syncthreads();
+            read_buffer ^= 1;
+        }
+    }
+
+    #pragma unroll
+    for (int local_row = 0; local_row < TM; ++local_row) {
+        const int row = blockIdx.y * BM + ty * TM + local_row;
+        const int col = blockIdx.x * BN + tx * TN;
+        if (row < M && col + 3 < K) {
+            *reinterpret_cast<float4*>(&C[static_cast<size_t>(row) * K + col]) =
+                make_float4(accumulators[local_row][0],
+                            accumulators[local_row][1],
+                            accumulators[local_row][2],
+                            accumulators[local_row][3]);
+        }
+    }
+#endif
+}
+
+}  // namespace
+
+extern "C" void solve(const float* A, const float* B, float* C,
+                      int M, int N, int K) {
+    static const bool supports_cp_async = [] {
+        int device = 0;
+        cudaDeviceProp properties{};
+        cudaGetDevice(&device);
+        cudaGetDeviceProperties(&properties, device);
+        return properties.major >= 8;
+    }();
+
+    if (!supports_cp_async || (N & 3) != 0 || (K & 3) != 0) {
+        const dim3 block(16, 16);
+        const dim3 grid((K + 15) / 16, (M + 15) / 16);
+        scalar_fallback_v4<<<grid, block>>>(A, B, C, M, N, K);
+        return;
+    }
+
+    const dim3 block(THREADS_X, THREADS_Y);
+    const dim3 grid((K + BN - 1) / BN, (M + BM - 1) / BM);
+    matrix_multiplication_v4_cp_async<<<grid, block>>>(A, B, C, M, N, K);
+}
+```
+
+### V5: WMMA TF32 Tensor Core Kernel
+
+#### Approach
+
+V5 changes both the execution unit and numerical format. The public interface still receives and returns FP32 matrices, but the fast path explicitly rounds input values to TensorFloat-32 and performs the matrix multiply-accumulate operations on Tensor Cores with FP32 accumulators.
+
+TF32 keeps the eight-bit exponent range of FP32 but uses a ten-bit explicit mantissa. The conversion is performed with:
+
+```text
+cvt.rna.tf32.f32
+```
+
+This means V5 is not numerically identical to the strict FP32 CUDA Core versions. It trades input mantissa precision for access to Tensor Core matrix instructions. The test therefore uses a `5e-3` scaled tolerance while still rejecting every non-finite result and comparing every output element with the CPU reference.
+
+One block produces a `128 x 128` output tile and reduces `K` in chunks of 32. The block contains 16 warps. Each warp owns one `16 x 64` strip of the output, represented by four `16 x 16` accumulator fragments. Two warps cover the left and right halves of the same 16-row strip.
+
+For each `K=32` shared-memory tile:
+
+1. All 512 threads cooperatively load `A[128, 32]` and `B[32, 128]`, converting each value to TF32.
+2. A single block synchronization makes both tiles visible.
+3. The tile is divided into four WMMA reduction steps because TF32 WMMA uses `16 x 16 x 8` fragments.
+4. Each warp loads one `A` fragment and four `B` fragments per step.
+5. `wmma::mma_sync` updates the four FP32 accumulator fragments.
+6. After all reduction tiles, `wmma::store_matrix_sync` writes the fragments to row-major FP32 output memory.
+
+The fast path requires `M` and `K` to align with the `128 x 128` output tile and `N` to align with `BK=32`. Other shapes, older architectures, and boundary cases use the scalar FP32 fallback. This preserves the challenge interface and general correctness while keeping the WMMA kernel free of partial-fragment stores.
+
+Tensor Cores provide high peak throughput, but this implementation also pays for explicit TF32 conversion, shared-memory staging, frequent fragment loads, block synchronization, and WMMA fragment ownership. The measurements therefore demonstrate a correct low-level WMMA implementation, not an automatic claim that it beats the carefully tuned CUDA Core kernel.
+
+#### Solution
+
+```cuda
+#include <cuda_runtime.h>
+#include <mma.h>
+
+namespace {
+
+constexpr int BM = 128;
+constexpr int BN = 128;
+constexpr int BK = 32;
+constexpr int WARPS_PER_BLOCK = 16;
+constexpr int THREADS_PER_BLOCK = WARPS_PER_BLOCK * 32;
+constexpr int WMMA_K = 8;
+constexpr int OUTPUT_FRAGMENTS_PER_WARP = BN / 32;
+
+__device__ __forceinline__ float to_tf32(float value) {
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 800
+    unsigned int tf32_bits;
+    asm("cvt.rna.tf32.f32 %0, %1;" : "=r"(tf32_bits) : "f"(value));
+    return __uint_as_float(tf32_bits);
+#else
+    return value;
+#endif
+}
+
+__global__ void scalar_fallback_v5(const float* A, const float* B, float* C,
+                                   int M, int N, int K) {
+    const int row = blockIdx.y * blockDim.y + threadIdx.y;
+    const int col = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row >= M || col >= K) return;
+
+    float sum = 0.0f;
+    for (int inner = 0; inner < N; ++inner) {
+        sum += A[row * N + inner] * B[inner * K + col];
+    }
+    C[row * K + col] = sum;
+}
+
+__global__ void matrix_multiplication_v5_wmma_tf32(
+    const float* __restrict__ A,
+    const float* __restrict__ B,
+    float* __restrict__ C,
+    int M, int N, int K) {
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 800
+    using namespace nvcuda;
+
+    __shared__ __align__(16) float shared_a[BM][BK];
+    __shared__ __align__(16) float shared_b[BK][BN];
+
+    const int tid = threadIdx.x;
+    const int warp_id = tid / 32;
+    const int warp_row = warp_id / 2;
+    const int warp_col_group = warp_id % 2;
+
+    wmma::fragment<wmma::accumulator, 16, 16, WMMA_K, float>
+        accumulators[OUTPUT_FRAGMENTS_PER_WARP];
+    #pragma unroll
+    for (int fragment = 0; fragment < OUTPUT_FRAGMENTS_PER_WARP; ++fragment) {
+        wmma::fill_fragment(accumulators[fragment], 0.0f);
+    }
+
+    for (int inner_base = 0; inner_base < N; inner_base += BK) {
+        for (int index = tid; index < BM * BK;
+             index += THREADS_PER_BLOCK) {
+            const int local_row = index / BK;
+            const int local_inner = index % BK;
+            const int row = blockIdx.y * BM + local_row;
+            const float value = A[static_cast<size_t>(row) * N +
+                                  inner_base + local_inner];
+            shared_a[local_row][local_inner] = to_tf32(value);
+        }
+        for (int index = tid; index < BK * BN;
+             index += THREADS_PER_BLOCK) {
+            const int local_inner = index / BN;
+            const int local_col = index % BN;
+            const int col = blockIdx.x * BN + local_col;
+            const float value = B[static_cast<size_t>(inner_base + local_inner) * K +
+                                  col];
+            shared_b[local_inner][local_col] = to_tf32(value);
+        }
+        __syncthreads();
+
+        const int local_row = warp_row * 16;
+        #pragma unroll
+        for (int inner = 0; inner < BK; inner += WMMA_K) {
+            wmma::fragment<wmma::matrix_a, 16, 16, WMMA_K,
+                           wmma::precision::tf32, wmma::row_major> a_fragment;
+            wmma::load_matrix_sync(
+                a_fragment, &shared_a[local_row][inner], BK);
+
+            #pragma unroll
+            for (int fragment = 0;
+                 fragment < OUTPUT_FRAGMENTS_PER_WARP;
+                 ++fragment) {
+                wmma::fragment<wmma::matrix_b, 16, 16, WMMA_K,
+                               wmma::precision::tf32,
+                               wmma::row_major> b_fragment;
+                wmma::load_matrix_sync(
+                    b_fragment,
+                    &shared_b[inner][warp_col_group * 64 + fragment * 16],
+                    BN);
+                wmma::mma_sync(accumulators[fragment], a_fragment,
+                               b_fragment, accumulators[fragment]);
+            }
+        }
+        __syncthreads();
+    }
+
+    const int output_row = blockIdx.y * BM + warp_row * 16;
+    const int output_col = blockIdx.x * BN + warp_col_group * 64;
+    #pragma unroll
+    for (int fragment = 0; fragment < OUTPUT_FRAGMENTS_PER_WARP; ++fragment) {
+        wmma::store_matrix_sync(
+            &C[static_cast<size_t>(output_row) * K +
+               output_col + fragment * 16],
+            accumulators[fragment], K, wmma::mem_row_major);
+    }
+#endif
+}
+
+}  // namespace
+
+extern "C" void solve(const float* A, const float* B, float* C,
+                      int M, int N, int K) {
+    static const bool supports_wmma_tf32 = [] {
+        int device = 0;
+        cudaDeviceProp properties{};
+        cudaGetDevice(&device);
+        cudaGetDeviceProperties(&properties, device);
+        return properties.major >= 8;
+    }();
+
+    if (!supports_wmma_tf32 ||
+        M % BM != 0 || N % BK != 0 || K % BN != 0) {
+        const dim3 block(16, 16);
+        const dim3 grid((K + 15) / 16, (M + 15) / 16);
+        scalar_fallback_v5<<<grid, block>>>(A, B, C, M, N, K);
+        return;
+    }
+
+    const dim3 block(THREADS_PER_BLOCK);
+    const dim3 grid(K / BN, M / BM);
+    matrix_multiplication_v5_wmma_tf32<<<grid, block>>>(A, B, C, M, N, K);
+}
+```
+
 ### Test Methodology
 
-All CUDA methods use the same test file and must pass seven correctness shapes, including scalar, rectangular, aligned, and non-aligned dimensions. The checker rejects non-finite output values before applying its numerical tolerance.
+All CUDA methods use the same test file and must pass nine correctness shapes, including scalar, rectangular, aligned, non-aligned, partial-tile, and multi-block dimensions. The checker rejects non-finite output values and compares every output element with a CPU reference using a scaled tolerance of `5e-3`. This tolerance covers the deliberate TF32 input rounding in V5; the strict FP32 methods are evaluated by the same test so that every row in the comparison uses one common procedure. The `129 x 96` by `96 x 132` case exercises V4's asynchronous fast path with partial output tiles, while the `256 x 96` by `96 x 256` case exercises multiple WMMA output blocks.
 
-The performance case uses `M=8192`, `N=6144`, and `K=4096`. Inputs are initialized with deterministic nonzero values so that zero-filled allocations do not produce an unrepresentative memory behavior. Five warm-up iterations run before ten CUDA-event measurements. The tables above report the average, minimum, maximum, and calculated floating-point throughput from those ten measurements.
+The performance case uses `M=8192`, `N=6144`, and `K=4096`. Inputs are initialized with deterministic nonzero values so that zero-filled allocations do not produce an unrepresentative memory behavior. Every method is compiled for the native remote GPU architecture. Five warm-up iterations run before ten CUDA-event measurements. The tables below report the average, minimum, maximum, and calculated floating-point throughput from those ten measurements.
 
 ### Test Code
 
@@ -1008,6 +1322,48 @@ int main() {
     return 0;
 }
 ```
+
+### Test Result
+
+The following tables intentionally keep results from the same GPU together. They compare methods within one platform; they are not intended to rank one GPU against the other. `Default` currently selects the V3 large-tile implementation, so its row is a repeated run of that source path rather than another algorithm.
+
+#### NVIDIA GeForce RTX 5070 Ti Laptop GPU
+
+| Method | Arithmetic | Status | Average Time | Minimum Time | Maximum Time | Performance |
+|---|---|:---:|---:|---:|---:|---:|
+| V0 naive | FP32 | PASS | 383.370 ms | 348.679 ms | 417.879 ms | 1075.506 GFLOPS |
+| V1 shared memory | FP32 | PASS | 250.884 ms | 224.301 ms | 302.463 ms | 1643.454 GFLOPS |
+| V1 1D thread tiling | FP32 | PASS | 135.891 ms | 128.005 ms | 150.389 ms | 3034.181 GFLOPS |
+| V1 2D thread tiling | FP32 | PASS | 123.423 ms | 117.553 ms | 135.046 ms | 3340.669 GFLOPS |
+| V2 vectorized, `BK=32` | FP32 | PASS | 46.376 ms | 44.035 ms | 48.737 ms | 8890.723 GFLOPS |
+| V2 vectorized, `BK=16` | FP32 | PASS | 38.761 ms | 36.343 ms | 40.281 ms | 10637.490 GFLOPS |
+| V2 vectorized, `128 x 128` | FP32 | PASS | 38.842 ms | 37.423 ms | 41.546 ms | 10615.226 GFLOPS |
+| V3 software double buffer, `64 x 64` | FP32 | PASS | 39.642 ms | 34.580 ms | 42.673 ms | 10400.993 GFLOPS |
+| V3 software double buffer, `128 x 128` | FP32 | PASS | 34.590 ms | 32.101 ms | 37.409 ms | 11920.091 GFLOPS |
+| **V4 hardware `cp.async`** | **FP32** | **PASS** | **34.572 ms** | **31.259 ms** | **37.045 ms** | **11926.402 GFLOPS** |
+| V5 WMMA Tensor Core | TF32 input, FP32 accumulation | PASS | 57.805 ms | 52.967 ms | 66.704 ms | 7132.925 GFLOPS |
+| Default (V3 `128 x 128`) | FP32 | PASS | 34.486 ms | 31.874 ms | 37.132 ms | 11956.000 GFLOPS |
+
+On this GPU, V4 has the lowest average in the final common test, but its `34.572 ms` result is effectively tied with the matching large V3 result of `34.590 ms` relative to the observed run-to-run spread. Repeated V4 runs ranged from roughly 32 to 35 ms. The evidence therefore shows that hardware-asynchronous copies are competitive on this platform, not that the 0.018 ms final difference is significant. V5 is correct under the documented TF32 tolerance but is slower than the tuned CUDA Core kernels because this hand-written WMMA mapping pays substantial conversion, shared-memory, synchronization, and fragment-management costs.
+
+#### NVIDIA GeForce RTX 4090
+
+| Method | Arithmetic | Status | Average Time | Minimum Time | Maximum Time | Performance |
+|---|---|:---:|---:|---:|---:|---:|
+| V0 naive | FP32 | PASS | 83.140 ms | 82.831 ms | 83.375 ms | 4959.321 GFLOPS |
+| V1 shared memory | FP32 | PASS | 59.379 ms | 58.985 ms | 59.865 ms | 6943.818 GFLOPS |
+| V1 1D thread tiling | FP32 | PASS | 19.484 ms | 19.393 ms | 19.505 ms | 21161.508 GFLOPS |
+| V1 2D thread tiling | FP32 | PASS | 13.446 ms | 13.420 ms | 13.465 ms | 30665.525 GFLOPS |
+| V2 vectorized, `BK=32` | FP32 | PASS | 11.646 ms | 11.098 ms | 12.106 ms | 35404.086 GFLOPS |
+| V2 vectorized, `BK=16` | FP32 | PASS | 11.314 ms | 11.213 ms | 11.345 ms | 36441.761 GFLOPS |
+| V2 vectorized, `128 x 128` | FP32 | PASS | 13.146 ms | 13.135 ms | 13.173 ms | 31363.839 GFLOPS |
+| V3 software double buffer, `64 x 64` | FP32 | PASS | 11.514 ms | 11.380 ms | 11.654 ms | 35809.707 GFLOPS |
+| **V3 software double buffer, `128 x 128`** | **FP32** | **PASS** | **10.052 ms** | **9.939 ms** | **10.213 ms** | **41019.869 GFLOPS** |
+| V4 hardware `cp.async` | FP32 | PASS | 10.293 ms | 10.230 ms | 10.415 ms | 40056.186 GFLOPS |
+| V5 WMMA Tensor Core | TF32 input, FP32 accumulation | PASS | 12.675 ms | 12.107 ms | 13.133 ms | 32528.826 GFLOPS |
+| Default (V3 `128 x 128`) | FP32 | PASS | 10.096 ms | 10.010 ms | 10.144 ms | 40840.572 GFLOPS |
+
+On this GPU, the large V3 software pipeline remains the fastest measured implementation. V4 overlaps copies with arithmetic but does not recover the extra copy-group and synchronization overhead. V5 again demonstrates functional Tensor Core execution without outperforming the established FP32 path. The result is a useful boundary: Tensor Core peak throughput alone does not guarantee a faster end-to-end kernel when data preparation and fragment scheduling are not as mature as a production GEMM library.
 
 ## Triton
 

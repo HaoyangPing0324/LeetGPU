@@ -166,13 +166,13 @@ if ($Status -eq "PASS") {
         $RemoteCommand = "cd /d `"$RemoteDirWin`""
         if ($env:REMOTE_VCVARS) { $RemoteCommand += " && call `"$($env:REMOTE_VCVARS)`" >nul" }
         $RemoteCommand += " && echo === GPU === && nvidia-smi.exe --query-gpu=name,driver_version,memory.total --format=csv,noheader"
-        $RemoteCommand += " && echo === Compile: $Problem === && `"$($env:REMOTE_NVCC)`" -O2"
+        $RemoteCommand += " && echo === Compile: $Problem === && `"$($env:REMOTE_NVCC)`" -O2 -arch=native"
         if ($env:REMOTE_CCBIN) { $RemoteCommand += " -ccbin `"$($env:REMOTE_CCBIN)`"" }
         $RemoteCommand += " -o cuda_app.exe `"src\cuda\$Problem.cu`" `"test\cuda\$Problem.cu`""
         $RemoteCommand += " && echo === Program output: $Problem === && cuda_app.exe"
     } else {
         $RemoteCommand = "cd '$RemoteDir' && echo '=== GPU ===' && nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader"
-        $RemoteCommand += " && echo '=== Compile: $Problem ===' && `"$($env:REMOTE_NVCC)`" -O2"
+        $RemoteCommand += " && echo '=== Compile: $Problem ===' && `"$($env:REMOTE_NVCC)`" -O2 -arch=native"
         if ($env:REMOTE_CCBIN) { $RemoteCommand += " -ccbin `"$($env:REMOTE_CCBIN)`"" }
         $RemoteCommand += " -o cuda_app 'src/cuda/$Problem.cu' 'test/cuda/$Problem.cu'"
         $RemoteCommand += " && echo '=== Program output: $Problem ===' && ./cuda_app"

@@ -1,6 +1,6 @@
 ============================================================
 CUDA problem: 02_Matrix_Multiplication
-CUDA method: default
+CUDA method: v5_wmma_tf32
 ============================================================
 [1/4] Creating remote directories...
 [2/4] Uploading source and test files...
@@ -8,11 +8,10 @@ CUDA method: default
 === GPU ===
 NVIDIA GeForce RTX 5070 Ti Laptop GPU, 592.01, 12227 MiB
 === Compile: 02_Matrix_Multiplication ===
-nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
 02_Matrix_Multiplication.cu
-tmpxft_00008bb8_00000000-7_02_Matrix_Multiplication.cudafe1.cpp
+tmpxft_0000035c_00000000-8_02_Matrix_Multiplication.cudafe1.cpp
 02_Matrix_Multiplication.cu
-tmpxft_00008bb8_00000000-11_02_Matrix_Multiplication.cudafe1.cpp
+tmpxft_0000035c_00000000-12_02_Matrix_Multiplication.cudafe1.cpp
   正在创建库 cuda_app.lib 和对象 cuda_app.exp
 === Program output: 02_Matrix_Multiplication ===
 === Matrix multiplication correctness ===
@@ -23,8 +22,10 @@ tmpxft_00008bb8_00000000-11_02_Matrix_Multiplication.cudafe1.cpp
 [PASS] matrix correctness 127x129 * 129x131
 [PASS] matrix correctness 64x96 * 96x128
 [PASS] matrix correctness 128x128 * 128x128
+[PASS] matrix correctness 129x96 * 96x132
+[PASS] matrix correctness 256x96 * 96x256
 === Matrix multiplication performance ===
-[PERF] matrix M=8192, N=6144, K=4096, iterations=10, avg=32.366 ms, max=35.650 ms, min=29.716 ms, throughput=12739.032 GFLOPS
+[PERF] matrix M=8192, N=6144, K=4096, iterations=10, avg=57.805 ms, max=66.704 ms, min=52.967 ms, throughput=7132.925 GFLOPS
 PASS: matrix multiplication test suite
 [4/4] Cleaning remote files...
 Result: PASS - 02_Matrix_Multiplication
