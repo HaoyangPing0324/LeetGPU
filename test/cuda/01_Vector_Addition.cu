@@ -45,7 +45,7 @@ private:
 };
 
 static bool run_correctness_case(int n) {
-    // ==================== 核心正确性测试开始 ====================
+    // ==================== Core correctness tests begin ====================
     const size_t count = static_cast<size_t>(n);
     const size_t bytes = count * sizeof(float);
     std::vector<float> a(count);
@@ -95,12 +95,12 @@ static bool run_correctness_case(int n) {
     }
 
     std::cout << "[PASS] vector_add correctness N=" << n << '\n';
-    // ==================== 核心正确性测试结束 ====================
+    // ==================== Core correctness tests end ====================
     return true;
 }
 
 static bool run_performance_test() {
-    // ==================== 核心性能测试开始 ====================
+    // ==================== Core performance test begins ====================
     constexpr int n = 25000000;
     constexpr int warmup_iterations = 3;
     constexpr int measured_iterations = 20;
@@ -175,7 +175,7 @@ static bool run_performance_test() {
               << ", max=" << maximum_ms << " ms"
               << ", min=" << minimum_ms << " ms"
               << ", effective bandwidth=" << effective_bandwidth_gbs << " GB/s\n";
-    // ==================== 核心性能测试结束 ====================
+    // ==================== Core performance test ends ====================
     return true;
 }
 

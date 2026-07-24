@@ -86,6 +86,8 @@ Matrix \(C\) (\(1 \times 1\)):
 - 1 <= `M`, `N`, `K` <= 8192.
 - Performance is measured with `M` = 8192, `N` = 6144, `K` = 4096.
 
+All reported runs were launched from a Linux client. The NVIDIA GeForce RTX 5070 Ti Laptop GPU results were collected on a Windows remote server, while the NVIDIA GeForce RTX 4090 results were collected on a Linux remote server.
+
 ## CUDA
 
 ### Approach
