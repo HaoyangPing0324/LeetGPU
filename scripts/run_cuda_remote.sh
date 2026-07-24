@@ -6,10 +6,6 @@ ENV_FILE="$SCRIPT_DIR/.env"
 
 usage() {
     echo "Usage: $0 <problem_name> [method]"
-    echo "Methods for 02_Matrix_Multiplication: default, v0_naive, v1_shared_memory,"
-    echo "  v1_1d_thread_tiling, v1_2d_thread_tiling, v2_vectorized,"
-    echo "  v2_vectorized_bk16, v2_vectorized_large_tile, v3_double_buffered,"
-    echo "  v4_large_tile"
 }
 
 if [[ $# -lt 1 || $# -gt 2 ]]; then
@@ -39,8 +35,6 @@ else
 fi
 source_file="$PROJECT_DIR/src/cuda/$problem.cu"
 if [[ "$method" != "default" ]]; then
-    [[ "$problem" == "02_Matrix_Multiplication" ]] ||
-        { echo "Error: method selection is currently available only for 02_Matrix_Multiplication" >&2; exit 2; }
     source_file="$PROJECT_DIR/src/cuda/${problem}_${method}.cu"
 fi
 test_file="$PROJECT_DIR/test/cuda/$problem.cu"
@@ -97,22 +91,12 @@ run_remote() {
     fi
     echo "[2/4] Uploading source and test files..."
     "${SCP[@]}" "${SCP_OPTIONS[@]}" "$source_file" "$REMOTE_TARGET:$remote_dir/src/cuda/$problem.cu" || return 1
-    if [[ "$problem" == "02_Matrix_Multiplication" &&
-          ( "$method" == "v2_vectorized_bk16" || "$method" == "v2_vectorized_large_tile" ) ]]; then
+    while IFS= read -r -d '' dependency_file; do
+        dependency_name="$(basename -- "$dependency_file")"
         "${SCP[@]}" "${SCP_OPTIONS[@]}" \
-            "$PROJECT_DIR/src/cuda/${problem}_v2_vectorized.cu" \
-            "$REMOTE_TARGET:$remote_dir/src/cuda/${problem}_v2_vectorized.cu" || return 1
-    fi
-    if [[ "$problem" == "02_Matrix_Multiplication" && ( "$method" == "v4_large_tile" || "$method" == "default" ) ]]; then
-        "${SCP[@]}" "${SCP_OPTIONS[@]}" \
-            "$PROJECT_DIR/src/cuda/${problem}_v3_double_buffered.cu" \
-            "$REMOTE_TARGET:$remote_dir/src/cuda/${problem}_v3_double_buffered.cu" || return 1
-        if [[ "$method" == "default" ]]; then
-            "${SCP[@]}" "${SCP_OPTIONS[@]}" \
-                "$PROJECT_DIR/src/cuda/${problem}_v4_large_tile.cu" \
-                "$REMOTE_TARGET:$remote_dir/src/cuda/${problem}_v4_large_tile.cu" || return 1
-        fi
-    fi
+            "$dependency_file" \
+            "$REMOTE_TARGET:$remote_dir/src/cuda/$dependency_name" || return 1
+    done < <(find "$PROJECT_DIR/src/cuda" -maxdepth 1 -type f -name "${problem}_*.cu" -print0)
     "${SCP[@]}" "${SCP_OPTIONS[@]}" "$test_file" "$REMOTE_TARGET:$remote_dir/test/cuda/$problem.cu" || return 1
     echo "[3/4] Compiling and running..."
     if [[ "$REMOTE_OS" == "windows" ]]; then

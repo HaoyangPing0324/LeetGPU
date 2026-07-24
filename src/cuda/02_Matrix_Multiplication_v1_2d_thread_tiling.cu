@@ -68,5 +68,4 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
     const dim3 block(BN / TN, BM / TM);
     const dim3 grid((K + BN - 1) / BN, (M + BM - 1) / BM);
     matrix_multiplication_v1_2d<BM, BN, BK, TM, TN><<<grid, block>>>(A, B, C, M, N, K);
-    cudaDeviceSynchronize();
 }

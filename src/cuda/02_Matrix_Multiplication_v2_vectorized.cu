@@ -114,5 +114,4 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
         matrix_multiplication_v2<BM, BN, BK, TM, TN>
             <<<grid, block>>>(A, B, C, M, N, K);
     }
-    cudaDeviceSynchronize();
 }

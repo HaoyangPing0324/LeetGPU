@@ -79,7 +79,8 @@ static bool run_correctness_case(int n) {
     for (int i = 0; i < n; ++i) {
         const float expected = a[i] + b[i];
         const float tolerance = 1e-6f * std::max(1.0f, std::fabs(expected));
-        if (std::fabs(c[i] - expected) > tolerance) {
+        if (!std::isfinite(c[i]) ||
+            std::fabs(c[i] - expected) > tolerance) {
             if (errors < 5) {
                 std::cerr << "Mismatch at " << i << ": " << c[i]
                           << " != " << expected << '\n';
@@ -99,10 +100,19 @@ static bool run_correctness_case(int n) {
     return true;
 }
 
+__global__ void fill_buffer(float* values, size_t count, float scale) {
+    const size_t index =
+        static_cast<size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+    if (index < count) {
+        const int centered = static_cast<int>(index % 17) - 8;
+        values[index] = static_cast<float>(centered) * scale;
+    }
+}
+
 static bool run_performance_test() {
     // ==================== Core performance test begins ====================
     constexpr int n = 25000000;
-    constexpr int warmup_iterations = 3;
+    constexpr int warmup_iterations = 5;
     constexpr int measured_iterations = 20;
     const size_t count = static_cast<size_t>(n);
     const size_t bytes = count * sizeof(float);
@@ -112,9 +122,18 @@ static bool run_performance_test() {
     DeviceBuffer<float> d_c;
     if (!d_a.allocate(count, "performance cudaMalloc(d_a)") ||
         !d_b.allocate(count, "performance cudaMalloc(d_b)") ||
-        !d_c.allocate(count, "performance cudaMalloc(d_c)") ||
-        !cuda_ok(cudaMemset(d_a.get(), 0, bytes), "performance memset a") ||
-        !cuda_ok(cudaMemset(d_b.get(), 0, bytes), "performance memset b")) {
+        !d_c.allocate(count, "performance cudaMalloc(d_c)")) {
+        return false;
+    }
+
+    constexpr int fill_threads = 256;
+    fill_buffer<<<(count + fill_threads - 1) / fill_threads, fill_threads>>>(
+        d_a.get(), count, 1.0f / 16.0f);
+    fill_buffer<<<(count + fill_threads - 1) / fill_threads, fill_threads>>>(
+        d_b.get(), count, 1.0f / 16.0f);
+    if (!cuda_ok(cudaGetLastError(), "performance input initialization") ||
+        !cuda_ok(cudaDeviceSynchronize(),
+                 "performance input initialization synchronize")) {
         return false;
     }
 

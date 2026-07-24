@@ -68,7 +68,6 @@ extern "C" void solve(const float* A, const float* B, float* C, int N) {
     int blocksPerGrid = (N + threadsPerBlock - 1) / threadsPerBlock;
 
     vector_add<<<blocksPerGrid, threadsPerBlock>>>(A, B, C, N);
-    cudaDeviceSynchronize();
 }
 ```
 
@@ -143,8 +142,8 @@ int main() {
 
 | Platform | Status | Problem Size | Iterations | Average Time | Minimum Time | Maximum Time | Performance |
 |---|:---:|---|---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | N=25000000 | 20 | 0.929 ms | 0.727 ms | 1.708 ms | 322.986 GB/s |
-| NVIDIA GeForce RTX 4090 | PASS | N=25000000 | 20 | 0.379 ms | 0.327 ms | 1.332 ms | 792.152 GB/s |
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | N=25000000 | 20 | 0.826 ms | 0.748 ms | 1.325 ms | 363.144 GB/s |
+| NVIDIA GeForce RTX 4090 | PASS | N=25000000 | 20 | 0.324 ms | 0.321 ms | 0.325 ms | 927.272 GB/s |
 
 ## Triton
 
@@ -233,8 +232,8 @@ if __name__ == "__main__":
 
 | Platform | Status | Problem Size | Iterations | Average Time | Minimum Time | Maximum Time | Performance |
 |---|:---:|---|---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | N=25000000 | 20 | 0.965 ms | 0.746 ms | 1.754 ms | 310.909 GB/s |
-| NVIDIA GeForce RTX 4090 | PASS | N=25000000 | 20 | 0.344 ms | 0.339 ms | 0.356 ms | 872.288 GB/s |
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | N=25000000 | 20 | 0.809 ms | 0.764 ms | 1.085 ms | 371.021 GB/s |
+| NVIDIA GeForce RTX 4090 | PASS | N=25000000 | 20 | 0.443 ms | 0.364 ms | 1.807 ms | 676.908 GB/s |
 
 
 ## PyTorch
@@ -303,8 +302,8 @@ if __name__ == "__main__":
 
 | Platform | Status | Problem Size | Iterations | Average Time | Minimum Time | Maximum Time | Performance |
 |---|:---:|---|---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | N=25000000 | 20 | 0.788 ms | 0.744 ms | 1.087 ms | 380.604 GB/s |
-| NVIDIA GeForce RTX 4090 | PASS | N=25000000 | 20 | 0.331 ms | 0.330 ms | 0.339 ms | 905.015 GB/s |
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | N=25000000 | 20 | 0.817 ms | 0.731 ms | 1.077 ms | 367.031 GB/s |
+| NVIDIA GeForce RTX 4090 | PASS | N=25000000 | 20 | 0.347 ms | 0.336 ms | 0.373 ms | 864.318 GB/s |
 
 ## References
 

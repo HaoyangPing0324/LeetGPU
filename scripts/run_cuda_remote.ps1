@@ -49,9 +49,6 @@ if ([IO.Path]::IsPathRooted($env:LOCAL_PROJECT_PATH)) {
 
 $SourceFile = Join-Path $ProjectDir "src/cuda/$Problem.cu"
 if ($Method -ne "default") {
-    if ($Problem -ne "02_Matrix_Multiplication") {
-        throw "Method selection is currently available only for 02_Matrix_Multiplication"
-    }
     $SourceFile = Join-Path $ProjectDir "src/cuda/${Problem}_${Method}.cu"
 }
 $TestFile = Join-Path $ProjectDir "test/cuda/$Problem.cu"
@@ -150,10 +147,11 @@ if ($NativeExitCode -ne 0) { $Status = "FAIL" } else { $RemoteCreated = $true }
 if ($Status -eq "PASS") {
     Write-Log "[2/4] Uploading source and test files..."
     Invoke-ScpCommand $SourceFile "$RemoteDir/src/cuda/$Problem.cu" 2>&1 | Tee-Object -LiteralPath $ResultFile -Append
-    if ($NativeExitCode -eq 0 -and $Problem -eq "02_Matrix_Multiplication" -and
-        $Method -in @("v4_large_tile", "default")) {
-        $DependencyFile = Join-Path $ProjectDir "src/cuda/${Problem}_v3_double_buffered.cu"
-        Invoke-ScpCommand $DependencyFile "$RemoteDir/src/cuda/${Problem}_v3_double_buffered.cu" 2>&1 |
+    $DependencyFiles = Get-ChildItem -LiteralPath (Join-Path $ProjectDir "src/cuda") `
+        -Filter "${Problem}_*.cu" -File
+    foreach ($DependencyFile in $DependencyFiles) {
+        if ($NativeExitCode -ne 0) { break }
+        Invoke-ScpCommand $DependencyFile.FullName "$RemoteDir/src/cuda/$($DependencyFile.Name)" 2>&1 |
             Tee-Object -LiteralPath $ResultFile -Append
     }
     if ($NativeExitCode -eq 0) {

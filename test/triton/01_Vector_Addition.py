@@ -28,26 +28,29 @@ def run_correctness_tests(solve):
 
         solve(input_a, input_b, actual, size)
         torch.cuda.synchronize()
+        if not torch.isfinite(actual).all():
+            raise AssertionError("Output contains non-finite values.")
         torch.testing.assert_close(actual, expected, rtol=1e-5, atol=1e-6)
         print(f"[PASS] vector_add correctness N={size}")
 
 
 def run_performance_test(solve):
     size = 25_000_000
-    warmup_iterations = 3
+    warmup_iterations = 5
     measured_iterations = 20
-    input_a = torch.zeros(size, device="cuda", dtype=torch.float32)
-    input_b = torch.zeros(size, device="cuda", dtype=torch.float32)
+    pattern = (torch.arange(17, device="cuda", dtype=torch.float32) - 8.0) / 16.0
+    input_a = pattern.repeat((size + 16) // 17)[:size]
+    input_b = pattern.repeat((size + 16) // 17)[:size]
     output = torch.empty_like(input_a)
 
     for _ in range(warmup_iterations):
         solve(input_a, input_b, output, size)
     torch.cuda.synchronize()
 
+    start = torch.cuda.Event(enable_timing=True)
+    stop = torch.cuda.Event(enable_timing=True)
     timings = []
     for _ in range(measured_iterations):
-        start = torch.cuda.Event(enable_timing=True)
-        stop = torch.cuda.Event(enable_timing=True)
         start.record()
         solve(input_a, input_b, output, size)
         stop.record()

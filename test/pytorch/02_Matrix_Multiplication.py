@@ -22,6 +22,8 @@ def run_correctness_tests(solve):
         (1, 3, 1),
         (17, 19, 23),
         (127, 129, 131),
+        (64, 96, 128),
+        (128, 128, 128),
     ]
     generator = torch.Generator(device="cuda")
     generator.manual_seed(2026)
@@ -34,26 +36,29 @@ def run_correctness_tests(solve):
 
         solve(matrix_a, matrix_b, actual, m, n, k)
         torch.cuda.synchronize()
+        if not torch.isfinite(actual).all():
+            raise AssertionError("Output contains non-finite values.")
         torch.testing.assert_close(actual, expected, rtol=1e-4, atol=1e-4)
         print(f"[PASS] matrix correctness {m}x{n} * {n}x{k}")
 
 
 def run_performance_test(solve):
     m, n, k = 8192, 6144, 4096
-    warmup_iterations = 1
-    measured_iterations = 3
-    matrix_a = torch.zeros((m, n), device="cuda", dtype=torch.float32)
-    matrix_b = torch.zeros((n, k), device="cuda", dtype=torch.float32)
+    warmup_iterations = 5
+    measured_iterations = 10
+    pattern = (torch.arange(17, device="cuda", dtype=torch.float32) - 8.0) / 16.0
+    matrix_a = pattern.repeat((m * n + 16) // 17)[:m * n].reshape(m, n)
+    matrix_b = pattern.repeat((n * k + 16) // 17)[:n * k].reshape(n, k)
     output = torch.empty((m, k), device="cuda", dtype=torch.float32)
 
     for _ in range(warmup_iterations):
         solve(matrix_a, matrix_b, output, m, n, k)
     torch.cuda.synchronize()
 
+    start = torch.cuda.Event(enable_timing=True)
+    stop = torch.cuda.Event(enable_timing=True)
     timings = []
     for _ in range(measured_iterations):
-        start = torch.cuda.Event(enable_timing=True)
-        stop = torch.cuda.Event(enable_timing=True)
         start.record()
         solve(matrix_a, matrix_b, output, m, n, k)
         stop.record()

@@ -159,7 +159,6 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
     const dim3 block(16, 16);
     const dim3 grid((K + block.x - 1) / block.x, (M + block.y - 1) / block.y);
     matrix_multiplication_v0<<<grid, block>>>(A, B, C, M, N, K);
-    cudaDeviceSynchronize();
 }
 ```
 
@@ -167,8 +166,8 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 
 | Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
 |---|:---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 384.666 ms | 342.381 ms | 445.092 ms | 1071.882 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | 83.107 ms | 82.699 ms | 83.530 ms | 4961.253 GFLOPS |
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 370.411 ms | 333.271 ms | 440.430 ms | 1113.135 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | 83.201 ms | 82.706 ms | 83.467 ms | 4955.654 GFLOPS |
 
 ### V1: Original `16 x 16` Shared-Memory Tiling
 
@@ -235,7 +234,6 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
                        (M + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
     matrix_multiplication_kernel<<<blocksPerGrid, threadsPerBlock>>>(A, B, C, M, N, K);
-    cudaDeviceSynchronize();
 }
 ```
 
@@ -243,8 +241,8 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 
 | Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
 |---|:---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 242.443 ms | 217.389 ms | 290.510 ms | 1700.675 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | 59.324 ms | 58.925 ms | 59.929 ms | 6950.270 GFLOPS |
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 253.695 ms | 223.976 ms | 306.542 ms | 1625.249 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | 59.247 ms | 58.716 ms | 60.184 ms | 6959.313 GFLOPS |
 
 ### V1: One-Dimensional Thread Tiling
 
@@ -333,7 +331,6 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
     const dim3 block(BN, BM / TM);
     const dim3 grid((K + BN - 1) / BN, (M + BM - 1) / BM);
     matrix_multiplication_v1_1d<BM, BN, BK, TM><<<grid, block>>>(A, B, C, M, N, K);
-    cudaDeviceSynchronize();
 }
 ```
 
@@ -341,8 +338,8 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 
 | Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
 |---|:---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 78.838 ms | 65.303 ms | 100.539 ms | 5229.916 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | 19.505 ms | 19.444 ms | 19.528 ms | 21138.901 GFLOPS |
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 81.154 ms | 67.253 ms | 105.337 ms | 5080.654 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | 19.415 ms | 19.372 ms | 19.487 ms | 21237.378 GFLOPS |
 
 ### V1: Two-Dimensional Thread Tiling
 
@@ -442,7 +439,6 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
     const dim3 block(BN / TN, BM / TM);
     const dim3 grid((K + BN - 1) / BN, (M + BM - 1) / BM);
     matrix_multiplication_v1_2d<BM, BN, BK, TM, TN><<<grid, block>>>(A, B, C, M, N, K);
-    cudaDeviceSynchronize();
 }
 ```
 
@@ -450,8 +446,8 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 
 | Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
 |---|:---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 53.735 ms | 50.348 ms | 70.620 ms | 7673.130 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | 13.354 ms | 12.488 ms | 13.925 ms | 30875.503 GFLOPS |
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 54.954 ms | 46.046 ms | 74.808 ms | 7502.970 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | 13.560 ms | 13.360 ms | 13.786 ms | 30406.969 GFLOPS |
 
 ### V2: Vectorized `float4` Transfers (`BK = 32`)
 
@@ -589,7 +585,6 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
         matrix_multiplication_v2<BM, BN, BK, TM, TN>
             <<<grid, block>>>(A, B, C, M, N, K);
     }
-    cudaDeviceSynchronize();
 }
 ```
 
@@ -597,8 +592,8 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 
 | Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
 |---|:---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 37.630 ms | 33.509 ms | 40.608 ms | 10957.192 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | 11.526 ms | 11.359 ms | 11.717 ms | 35773.893 GFLOPS |
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 39.486 ms | 36.339 ms | 45.050 ms | 10442.033 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | 11.412 ms | 11.183 ms | 11.631 ms | 36131.138 GFLOPS |
 
 ### V2 Control: Vectorized Single Buffer (`BK = 16`)
 
@@ -620,8 +615,8 @@ The matched configuration separates the effect of reduction-tile depth from the 
 
 | Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
 |---|:---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 38.951 ms | 36.741 ms | 41.201 ms | 10585.661 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | 11.035 ms | 10.414 ms | 11.805 ms | 37364.875 GFLOPS |
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 40.241 ms | 37.494 ms | 44.580 ms | 10246.190 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | 11.004 ms | 10.156 ms | 11.589 ms | 37470.392 GFLOPS |
 
 ### V2 Control: Vectorized Single Buffer (`128 x 128`)
 
@@ -647,8 +642,8 @@ The block grows from 128 to 512 threads and produces four times as many output e
 
 | Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
 |---|:---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 44.230 ms | 42.647 ms | 47.437 ms | 9322.085 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | 12.730 ms | 12.409 ms | 13.177 ms | 32389.696 GFLOPS |
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 45.082 ms | 42.618 ms | 47.103 ms | 9145.932 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | 12.735 ms | 12.387 ms | 13.171 ms | 32376.516 GFLOPS |
 
 ### V3: Register Prefetch and Double-Buffered Shared Memory
 
@@ -857,7 +852,6 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
         matrix_multiplication_v3<BM, BN, BK, TM, TN>
             <<<grid, block>>>(A, B, C, M, N, K);
     }
-    cudaDeviceSynchronize();
 }
 #endif
 ```
@@ -866,8 +860,8 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 
 | Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
 |---|:---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 39.856 ms | 38.156 ms | 41.806 ms | 10345.265 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | 12.214 ms | 11.304 ms | 12.783 ms | 33758.222 GFLOPS |
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 40.441 ms | 38.539 ms | 43.165 ms | 10195.625 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | 10.737 ms | 8.714 ms | 11.663 ms | 38399.761 GFLOPS |
 
 #### Large-Tile `128 x 128` Configuration
 
@@ -909,8 +903,8 @@ Under the revised benchmark, this configuration is the fastest project CUDA impl
 
 | Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
 |---|:---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 32.567 ms | 30.380 ms | 34.811 ms | 12660.545 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | 10.284 ms | 9.941 ms | 10.721 ms | 40094.689 GFLOPS |
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 32.366 ms | 29.716 ms | 35.650 ms | 12739.032 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | 10.399 ms | 10.008 ms | 10.715 ms | 39651.122 GFLOPS |
 
 #### Controlled Comparison
 
@@ -918,12 +912,23 @@ All four rows below use `BK = 16`, an `8 x 4` per-thread micro-tile, determinist
 
 | Buffering | Output Tile | RTX 5070 Ti Laptop GPU | RTX 4090 |
 |---|---:|---:|---:|
-| Single buffer | `64 x 64` | 38.951 ms | 11.035 ms |
-| Single buffer | `128 x 128` | 44.230 ms | 12.730 ms |
-| Double buffer | `64 x 64` | 39.856 ms | 12.214 ms |
-| Double buffer | `128 x 128` | **32.567 ms** | **10.284 ms** |
+| Single buffer | `64 x 64` | 40.241 ms | 11.004 ms |
+| Single buffer | `128 x 128` | 45.082 ms | 12.735 ms |
+| Double buffer | `64 x 64` | 40.441 ms | 10.737 ms |
+| Double buffer | `128 x 128` | **32.366 ms** | **10.399 ms** |
 
-At `64 x 64`, double buffering is slower than the matched single-buffered kernel. At `128 x 128`, the result reverses: the double-buffered configuration is substantially faster than the single-buffered large tile and also faster than both small-tile configurations. Consequently, neither double buffering nor tile enlargement is independently beneficial in these measurements. Their combination is the configuration that delivers the observed acceleration.
+At `64 x 64`, double buffering has only a small and platform-dependent effect: it is slightly faster on the RTX 4090 and slightly slower on the RTX 5070 Ti Laptop GPU. Enlarging the single-buffered kernel to `128 x 128` is slower on both GPUs. In contrast, the `128 x 128` double-buffered configuration is substantially faster than the single-buffered large tile and is the fastest common configuration in the table. The measured acceleration therefore comes from the interaction between the larger output tile and the double-buffered data path, not from a universal rule that either choice is independently faster.
+
+The following compiler resource report was produced with `nvcc -O2 -arch=sm_89 -Xptxas=-v` for the RTX 4090 target:
+
+| Buffering | Output Tile | Threads per Block | Registers per Thread | Shared Memory per Block | Spills |
+|---|---:|---:|---:|---:|---:|
+| Single buffer | `64 x 64` | 128 | 86 | 8 KiB | 0 |
+| Single buffer | `128 x 128` | 512 | 86 | 16 KiB | 0 |
+| Double buffer | `64 x 64` | 128 | 122 | 16 KiB | 0 |
+| Double buffer | `128 x 128` | 512 | 100 | 32 KiB | 0 |
+
+The report confirms the resource trade-off. The single-buffered large tile keeps the same 86 registers per thread but quadruples the thread count, so its register allocation per block grows from 11,008 to 44,032 registers. The base double-buffered kernel raises register use to 122 per thread because of prefetch state. For the large double-buffered instantiation, the compiler uses 100 registers per thread and no spills; the block performs four times as much output work while preserving the same per-thread micro-tile. These facts explain why occupancy and reuse can change sharply with the configuration, although register and shared-memory counts alone do not prove the exact runtime stall behavior.
 
 ### Test Methodology
 
@@ -1008,111 +1013,35 @@ int main() {
 
 ### Approach
 
-#### The same matrix product at a different abstraction level
-
-The Triton implementation computes the same relationship as the CUDA kernel:
+The Triton implementation computes the same row-major matrix product as CUDA:
 
 \[
 C[m,k] = \sum_{n=0}^{N-1} A[m,n]B[n,k].
 \]
 
-The main difference is the unit of parallel work. CUDA explicitly assigns one output element to one thread and manually stages data in shared memory. Triton assigns an entire output tile to one program instance and describes its work with vectors and small tensor blocks. Triton's compiler is then responsible for lowering the block operations to GPU threads, registers, memory operations, and synchronization.
-
-#### Two-dimensional program grid
-
-All three compile-time block sizes are fixed to 32:
+A Triton program instance owns one `64 x 64` output tile. The reduction dimension is processed in chunks of 32:
 
 ```text
-BLOCK_SIZE_M = 32
+BLOCK_SIZE_M = 64
 BLOCK_SIZE_N = 32
-BLOCK_SIZE_K = 32
+BLOCK_SIZE_K = 64
+GROUP_SIZE_M = 8
 ```
 
-Here, `M` and `K` identify the two output dimensions, while `N` is the reduction dimension. The launch grid is:
+The output grid is flattened to one dimension. From the linear program ID, the kernel derives `PID_M` and `PID_K`, which identify the output-row and output-column tiles. Programs are ordered in groups of up to eight M tiles before advancing farther across K. This grouped ordering keeps programs that reuse nearby tiles of `A` and `B` close in launch order, improving the opportunity for cache reuse compared with a simple row-major two-dimensional grid.
+
+For one program, the row and column offsets are:
 
 ```text
-(ceil(M / 32), ceil(K / 32))
+a_m_offset = PID_M * 64 + [0, ..., 63]
+b_k_offset = PID_K * 64 + [0, ..., 63]
 ```
 
-`tl.program_id(0)` selects a block of 32 output rows and `tl.program_id(1)` selects a block of 32 output columns. Consequently, one program instance owns one candidate `32 x 32` tile of `C`. Unlike the CUDA implementation, a program instance should not be interpreted as a single CUDA thread; it represents a block of elementwise and matrix operations that Triton maps onto the hardware.
+During each reduction step, broadcasting constructs a `64 x 32` pointer tile from `A` and a `32 x 64` pointer tile from `B`. The row-major strides are passed explicitly as `(N, 1)`, `(K, 1)`, and `(K, 1)` for `A`, `B`, and `C`. Masked loads replace invalid positions with zero, so partial tiles in any dimension remain correct.
 
-#### Offsets, strides, and row-major addresses
+`tl.dot` multiplies the two input tiles and accumulates into a float32 `64 x 64` block. `allow_tf32=False` keeps the calculation on the non-TF32 path used by this implementation. After the reduction loop, a final mask prevents stores outside `C`.
 
-The row offsets and column offsets are constructed as:
-
-```text
-a_m_offset = PID_M * 32 + [0, 1, ..., 31]
-b_k_offset = PID_K * 32 + [0, 1, ..., 31]
-```
-
-The source passes row-major strides explicitly:
-
-```text
-A: (stride_am, stride_an) = (N, 1)
-B: (stride_bn, stride_bk) = (K, 1)
-C: (stride_cm, stride_ck) = (K, 1)
-```
-
-For a reduction tile with offsets `a_n_offset`, broadcasting forms a complete matrix of pointers:
-
-```text
-a + a_m_offset[:, None] * N + a_n_offset[None, :]
-```
-
-The left term has conceptual shape `32 x 1`, the right term has shape `1 x 32`, and broadcasting produces the addresses of a `32 x 32` tile from `A`. The same construction produces a `32 x 32` tile from `B`:
-
-```text
-b + b_n_offset[:, None] * K + b_k_offset[None, :]
-```
-
-This pointer arithmetic is the Triton equivalent of the row-major indexing performed manually in CUDA. Because the strides are hard-coded from `N` and `K` instead of read from the input tensors, this implementation assumes contiguous row-major tensors, which matches the challenge interface and the tests.
-
-#### Iterating over the reduction dimension
-
-`MAX_N = tl.cdiv(N, BLOCK_SIZE_N)` is the number of 32-element reduction tiles. During every iteration:
-
-1. The program builds a `32 x 32` tile of pointers into `A`.
-2. It builds the matching `32 x 32` tile of pointers into `B`.
-3. It loads both tiles with masks.
-4. It multiplies them with `tl.dot`.
-5. It adds the partial product to a float32 accumulator.
-
-The accumulator has shape `32 x 32`:
-
-```text
-accumulated_block = tl.zeros((32, 32), dtype=tl.float32)
-```
-
-The call
-
-```text
-tl.dot(block_a_mn, block_b_nk, accumulated_block, allow_tf32=False)
-```
-
-performs the tile matrix product and carries the accumulated result into the next reduction iteration. `allow_tf32=False` requests the non-TF32 path for float32 inputs, keeping the numerical behavior closer to ordinary float32 multiplication than an explicitly TF32-enabled implementation.
-
-#### Masking partial tiles
-
-The matrix dimensions are not required to be multiples of 32. Triton therefore constructs Boolean masks for both input tiles:
-
-```text
-(a_m_offset < M) and (a_n_offset < N)
-(b_n_offset < N) and (b_k_offset < K)
-```
-
-Masked `tl.load` operations use `other=0.0`, so invalid rows, columns, and reduction positions behave as zero padding and do not affect the accumulated result. The final output mask:
-
-```text
-(a_m_offset < M) and (b_k_offset < K)
-```
-
-prevents the last program instances from storing outside `C`.
-
-#### Why no explicit shared memory or synchronization appears
-
-The algorithm is still tiled even though the Python source contains no `__shared__` array or `__syncthreads()`. The source expresses tiles through block-shaped loads and `tl.dot`; Triton's compiler chooses the low-level data movement and synchronization needed to execute them. Ownership is also simple: every program instance writes a distinct `32 x 32` region of `C`, so program instances do not need atomics or cross-program communication.
-
-This implementation is intentionally fixed rather than auto-tuned. It does not use grouped program ordering, multiple candidate block configurations, explicit `num_warps`, or other advanced scheduling choices. Its behavior follows directly from the three 32-element block sizes present in the source.
+The launch uses four warps and three pipeline stages per program. Compared with the previous fixed `32 x 32` output tile and ungrouped two-dimensional grid, the larger tile performs more work per program and the grouped ordering improves locality. Under the common benchmark, this reduces the average time from 16.907 ms to 9.803 ms on the RTX 4090 and from 78.710 ms to 32.518 ms on the RTX 5070 Ti Laptop GPU.
 
 ### Solution
 
@@ -1124,10 +1053,19 @@ import triton.language as tl
 
 @triton.jit
 def matrix_multiplication_kernel(
-    a, b, c, M, N, K, stride_am, stride_an, stride_bn, stride_bk, stride_cm, stride_ck, BLOCK_SIZE_M: tl.constexpr, BLOCK_SIZE_N: tl.constexpr, BLOCK_SIZE_K: tl.constexpr
+    a, b, c, M, N, K, stride_am, stride_an, stride_bn, stride_bk, stride_cm, stride_ck,
+    BLOCK_SIZE_M: tl.constexpr, BLOCK_SIZE_N: tl.constexpr,
+    BLOCK_SIZE_K: tl.constexpr, GROUP_SIZE_M: tl.constexpr
 ):
-    PID_M = tl.program_id(0)
-    PID_K = tl.program_id(1)
+    pid = tl.program_id(0)
+    num_pid_m = tl.cdiv(M, BLOCK_SIZE_M)
+    num_pid_k = tl.cdiv(K, BLOCK_SIZE_K)
+    num_pid_in_group = GROUP_SIZE_M * num_pid_k
+    group_id = pid // num_pid_in_group
+    first_pid_m = group_id * GROUP_SIZE_M
+    group_size_m = tl.minimum(num_pid_m - first_pid_m, GROUP_SIZE_M)
+    PID_M = first_pid_m + (pid % num_pid_in_group) % group_size_m
+    PID_K = (pid % num_pid_in_group) // group_size_m
     MAX_N = tl.cdiv(N, BLOCK_SIZE_N)
 
     accumulated_block = tl.zeros((BLOCK_SIZE_M, BLOCK_SIZE_K), dtype=tl.float32)
@@ -1169,16 +1107,20 @@ def solve(a: torch.Tensor, b: torch.Tensor, c: torch.Tensor, M: int, N: int, K: 
     stride_bn, stride_bk = K, 1
     stride_cm, stride_ck = K, 1
 
-    BLOCK_SIZE_M = 32
+    BLOCK_SIZE_M = 64
     BLOCK_SIZE_N = 32
-    BLOCK_SIZE_K = 32
+    BLOCK_SIZE_K = 64
+    GROUP_SIZE_M = 8
 
-    grid = (triton.cdiv(M, BLOCK_SIZE_M), triton.cdiv(K, BLOCK_SIZE_K))
+    grid = (triton.cdiv(M, BLOCK_SIZE_M) * triton.cdiv(K, BLOCK_SIZE_K),)
     matrix_multiplication_kernel[grid](
         a, b, c, M, N, K, stride_am, stride_an, stride_bn, stride_bk, stride_cm, stride_ck,
         BLOCK_SIZE_M = BLOCK_SIZE_M,
         BLOCK_SIZE_N = BLOCK_SIZE_N,
         BLOCK_SIZE_K = BLOCK_SIZE_K,
+        GROUP_SIZE_M = GROUP_SIZE_M,
+        num_warps=4,
+        num_stages=3,
     )
 ```
 
@@ -1226,8 +1168,8 @@ if __name__ == "__main__":
 
 | Platform | Status | Problem Size | Iterations | Average Time | Minimum Time | Maximum Time | Performance |
 |---|:---:|---|---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | M=8192, N=6144, K=4096 | 3 | 68.536 ms | 63.085 ms | 77.552 ms | 6016.063 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | M=8192, N=6144, K=4096 | 3 | 15.875 ms | 15.735 ms | 16.154 ms | 25972.196 GFLOPS |
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | M=8192, N=6144, K=4096 | 10 | 32.518 ms | 30.066 ms | 34.157 ms | 12679.673 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | M=8192, N=6144, K=4096 | 10 | 9.803 ms | 8.994 ms | 10.005 ms | 42061.461 GFLOPS |
 
 
 ## PyTorch
@@ -1309,8 +1251,8 @@ if __name__ == "__main__":
 
 | Platform | Status | Problem Size | Iterations | Average Time | Minimum Time | Maximum Time | Performance |
 |---|:---:|---|---:|---:|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | M=8192, N=6144, K=4096 | 3 | 26.839 ms | 25.407 ms | 28.341 ms | 15362.601 GFLOPS |
-| NVIDIA GeForce RTX 4090 | PASS | M=8192, N=6144, K=4096 | 3 | 7.043 ms | 7.037 ms | 7.053 ms | 58542.190 GFLOPS |
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | M=8192, N=6144, K=4096 | 10 | 29.305 ms | 25.729 ms | 31.689 ms | 14069.752 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | M=8192, N=6144, K=4096 | 10 | 7.469 ms | 7.188 ms | 7.559 ms | 55204.880 GFLOPS |
 
 ## References
 

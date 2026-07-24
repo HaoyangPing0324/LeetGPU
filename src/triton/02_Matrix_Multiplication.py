@@ -5,10 +5,19 @@ import triton.language as tl
 
 @triton.jit
 def matrix_multiplication_kernel(
-    a, b, c, M, N, K, stride_am, stride_an, stride_bn, stride_bk, stride_cm, stride_ck, BLOCK_SIZE_M: tl.constexpr, BLOCK_SIZE_N: tl.constexpr, BLOCK_SIZE_K: tl.constexpr
+    a, b, c, M, N, K, stride_am, stride_an, stride_bn, stride_bk, stride_cm, stride_ck,
+    BLOCK_SIZE_M: tl.constexpr, BLOCK_SIZE_N: tl.constexpr,
+    BLOCK_SIZE_K: tl.constexpr, GROUP_SIZE_M: tl.constexpr
 ):
-    PID_M = tl.program_id(0)
-    PID_K = tl.program_id(1)
+    pid = tl.program_id(0)
+    num_pid_m = tl.cdiv(M, BLOCK_SIZE_M)
+    num_pid_k = tl.cdiv(K, BLOCK_SIZE_K)
+    num_pid_in_group = GROUP_SIZE_M * num_pid_k
+    group_id = pid // num_pid_in_group
+    first_pid_m = group_id * GROUP_SIZE_M
+    group_size_m = tl.minimum(num_pid_m - first_pid_m, GROUP_SIZE_M)
+    PID_M = first_pid_m + (pid % num_pid_in_group) % group_size_m
+    PID_K = (pid % num_pid_in_group) // group_size_m
     MAX_N = tl.cdiv(N, BLOCK_SIZE_N)
 
     accumulated_block = tl.zeros((BLOCK_SIZE_M, BLOCK_SIZE_K), dtype=tl.float32)
@@ -50,14 +59,18 @@ def solve(a: torch.Tensor, b: torch.Tensor, c: torch.Tensor, M: int, N: int, K: 
     stride_bn, stride_bk = K, 1
     stride_cm, stride_ck = K, 1
 
-    BLOCK_SIZE_M = 32
+    BLOCK_SIZE_M = 64
     BLOCK_SIZE_N = 32
-    BLOCK_SIZE_K = 32
+    BLOCK_SIZE_K = 64
+    GROUP_SIZE_M = 8
 
-    grid = (triton.cdiv(M, BLOCK_SIZE_M), triton.cdiv(K, BLOCK_SIZE_K))
+    grid = (triton.cdiv(M, BLOCK_SIZE_M) * triton.cdiv(K, BLOCK_SIZE_K),)
     matrix_multiplication_kernel[grid](
         a, b, c, M, N, K, stride_am, stride_an, stride_bn, stride_bk, stride_cm, stride_ck,
         BLOCK_SIZE_M = BLOCK_SIZE_M,
         BLOCK_SIZE_N = BLOCK_SIZE_N,
         BLOCK_SIZE_K = BLOCK_SIZE_K,
+        GROUP_SIZE_M = GROUP_SIZE_M,
+        num_warps=4,
+        num_stages=3,
     )

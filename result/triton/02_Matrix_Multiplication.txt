@@ -5,15 +5,17 @@ Triton problem: 02_Matrix_Multiplication
 [2/4] Uploading source and test files...
 [3/4] Running...
 === GPU ===
-NVIDIA GeForce RTX 4090, 580.82.09, 24564 MiB
+NVIDIA GeForce RTX 5070 Ti Laptop GPU, 592.01, 12227 MiB
 === Matrix multiplication correctness ===
 [PASS] matrix correctness 1x1 * 1x1
 [PASS] matrix correctness 2x2 * 2x2
 [PASS] matrix correctness 1x3 * 3x1
 [PASS] matrix correctness 17x19 * 19x23
 [PASS] matrix correctness 127x129 * 129x131
+[PASS] matrix correctness 64x96 * 96x128
+[PASS] matrix correctness 128x128 * 128x128
 === Matrix multiplication performance ===
-[PERF] matrix M=8192, N=6144, K=4096, iterations=3, avg=15.875 ms, max=16.154 ms, min=15.735 ms, throughput=25972.196 GFLOPS
+[PERF] matrix M=8192, N=6144, K=4096, iterations=10, avg=32.518 ms, max=34.157 ms, min=30.066 ms, throughput=12679.673 GFLOPS
 PASS: matrix multiplication test suite
 [4/4] Cleaning remote files...
 Result: PASS - 02_Matrix_Multiplication

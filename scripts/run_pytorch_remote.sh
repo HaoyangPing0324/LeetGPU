@@ -70,6 +70,7 @@ run_remote() {
 status="PASS"; if ! run_remote 2>&1 | tee -a "$result_file"; then status="FAIL"; fi
 if [[ "${KEEP_REMOTE:-0}" == "1" ]]; then echo "[4/4] Remote files retained at: $remote_dir" | tee -a "$result_file"; else echo "[4/4] Cleaning remote files..." | tee -a "$result_file"; cleanup_remote 2>&1 | tee -a "$result_file" || true; fi
 echo "Result: $status - $problem" | tee -a "$result_file"
+sed -i 's/[[:space:]]*$//' "$result_file"
 perf_line="$(tr -d '\r' < "$result_file" | awk '/^\[PERF\]/{line=$0} END{print line}')"
 average="N/A"; maximum="N/A"; minimum="N/A"; problem_size="N/A"; iterations="N/A"; performance="N/A"
 platform="$(tr -d '\r' < "$result_file" | awk '/^=== GPU ===/{getline; sub(/,.*/, ""); print; exit}')"
