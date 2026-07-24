@@ -1,13 +1,19 @@
 ============================================================
 CUDA problem: 02_Matrix_Multiplication
-CUDA method: v3_double_buffered
+CUDA method: default
 ============================================================
 [1/4] Creating remote directories...
 [2/4] Uploading source and test files...
 [3/4] Compiling and running...
 === GPU ===
-NVIDIA GeForce RTX 4090, 580.82.09, 24564 MiB
+NVIDIA GeForce RTX 5070 Ti Laptop GPU, 592.01, 12227 MiB
 === Compile: 02_Matrix_Multiplication ===
+nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
+02_Matrix_Multiplication.cu
+tmpxft_00001600_00000000-7_02_Matrix_Multiplication.cudafe1.cpp
+02_Matrix_Multiplication.cu
+tmpxft_00001600_00000000-11_02_Matrix_Multiplication.cudafe1.cpp
+  正在创建库 cuda_app.lib 和对象 cuda_app.exp
 === Program output: 02_Matrix_Multiplication ===
 === Matrix multiplication correctness ===
 [PASS] matrix correctness 1x1 * 1x1
@@ -18,7 +24,7 @@ NVIDIA GeForce RTX 4090, 580.82.09, 24564 MiB
 [PASS] matrix correctness 64x96 * 96x128
 [PASS] matrix correctness 128x128 * 128x128
 === Matrix multiplication performance ===
-[PERF] matrix M=8192, N=6144, K=4096, iterations=3, avg=8.944 ms, max=9.351 ms, min=8.737 ms, throughput=46098.288 GFLOPS
+[PERF] matrix M=8192, N=6144, K=4096, iterations=10, avg=32.567 ms, max=34.811 ms, min=30.380 ms, throughput=12660.545 GFLOPS
 PASS: matrix multiplication test suite
 [4/4] Cleaning remote files...
 Result: PASS - 02_Matrix_Multiplication

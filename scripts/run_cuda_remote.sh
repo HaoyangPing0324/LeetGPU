@@ -7,8 +7,8 @@ ENV_FILE="$SCRIPT_DIR/.env"
 usage() {
     echo "Usage: $0 <problem_name> [method]"
     echo "Methods for 02_Matrix_Multiplication: default, v0_naive, v1_shared_memory,"
-    echo "  v1_1d_thread_tiling, v1_2d_thread_tiling, v2_vectorized, v3_double_buffered,"
-    echo "  v4_large_tile"
+    echo "  v1_1d_thread_tiling, v1_2d_thread_tiling, v2_vectorized,"
+    echo "  v2_vectorized_bk16, v3_double_buffered, v4_large_tile"
 }
 
 if [[ $# -lt 1 || $# -gt 2 ]]; then
@@ -96,10 +96,20 @@ run_remote() {
     fi
     echo "[2/4] Uploading source and test files..."
     "${SCP[@]}" "${SCP_OPTIONS[@]}" "$source_file" "$REMOTE_TARGET:$remote_dir/src/cuda/$problem.cu" || return 1
+    if [[ "$problem" == "02_Matrix_Multiplication" && "$method" == "v2_vectorized_bk16" ]]; then
+        "${SCP[@]}" "${SCP_OPTIONS[@]}" \
+            "$PROJECT_DIR/src/cuda/${problem}_v2_vectorized.cu" \
+            "$REMOTE_TARGET:$remote_dir/src/cuda/${problem}_v2_vectorized.cu" || return 1
+    fi
     if [[ "$problem" == "02_Matrix_Multiplication" && ( "$method" == "v4_large_tile" || "$method" == "default" ) ]]; then
         "${SCP[@]}" "${SCP_OPTIONS[@]}" \
             "$PROJECT_DIR/src/cuda/${problem}_v3_double_buffered.cu" \
             "$REMOTE_TARGET:$remote_dir/src/cuda/${problem}_v3_double_buffered.cu" || return 1
+        if [[ "$method" == "default" ]]; then
+            "${SCP[@]}" "${SCP_OPTIONS[@]}" \
+                "$PROJECT_DIR/src/cuda/${problem}_v4_large_tile.cu" \
+                "$REMOTE_TARGET:$remote_dir/src/cuda/${problem}_v4_large_tile.cu" || return 1
+        fi
     fi
     "${SCP[@]}" "${SCP_OPTIONS[@]}" "$test_file" "$REMOTE_TARGET:$remote_dir/test/cuda/$problem.cu" || return 1
     echo "[3/4] Compiling and running..."
@@ -131,6 +141,7 @@ else
     cleanup_remote 2>&1 | tee -a "$result_file" || true
 fi
 echo "Result: $status - $problem" | tee -a "$result_file"
+sed -i 's/[[:space:]]*$//' "$result_file"
 
 perf_line="$(tr -d '\r' < "$result_file" | awk '/^\[PERF\]/{line=$0} END{print line}')"
 average="N/A"; maximum="N/A"; minimum="N/A"; problem_size="N/A"; iterations="N/A"; performance="N/A"

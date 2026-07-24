@@ -122,7 +122,9 @@ Every `(row, col)` output coordinate is independent. CUDA therefore parallelizes
 
 The CUDA files form an optimization sequence. Every version preserves the same `solve(...)` interface and mathematical result. The versions differ in how much output work is assigned to each thread and how data moves through global memory, shared memory, and registers.
 
-#### V0: Naive Global-Memory Kernel
+### V0: Naive Global-Memory Kernel
+
+#### Approach
 
 V0 launches a two-dimensional grid with `16 x 16` threads per block. Each thread computes its output coordinate as:
 
@@ -135,175 +137,7 @@ The grid uses ceiling division in both output dimensions. A thread first checks 
 
 This mapping is direct and easy to verify, but it repeatedly fetches reusable data from global memory. Threads in the same output row all need the same row of `A`, while threads in the same output column need the same column of `B`. V0 does not preserve that reuse on chip, so the same values may be loaded many times.
 
-#### V1: Original `16 x 16` Shared-Memory Tiling
-
-The original implementation keeps one output element per thread but divides the reduction dimension into tiles of 16. One `16 x 16` block produces one `16 x 16` tile of `C`.
-
-For reduction tile `tile`, thread `(ty, tx)` loads:
-
-```text
-A[row, tile * 16 + tx] -> A_shared[ty][tx]
-B[tile * 16 + ty, col] -> B_shared[ty][tx]
-```
-
-After all 256 threads finish loading, each `A` value is shared by the 16 threads computing different output columns, and each `B` value is shared by the 16 threads computing different output rows. Every thread then performs 16 multiply-add operations:
-
-```text
-S += A_shared[ty][inner] * B_shared[inner][tx]
-```
-
-<video controls width="760">
-  <source src="../assets/02_Matrix_Multiplication/video_02.mp4" type="video/mp4">
-  Your Markdown viewer does not support embedded video. Open [the shared-memory tiling animation](../assets/02_Matrix_Multiplication/video_02.mp4) directly.
-</video>
-
-Two barriers are necessary for every reduction tile. The first prevents computation from starting before the cooperative load is complete. The second prevents the next tile from overwriting shared memory before every thread has finished using the current tile.
-
-The last reduction tile may be incomplete. Invalid input coordinates are written to shared memory as zero rather than causing an early return. This zero padding contributes nothing to the dot product and lets every thread reach the same barriers, avoiding divergent synchronization. The output store is guarded separately by `row < M && col < K`.
-
-#### V1: One-Dimensional Thread Tiling
-
-The 1D Thread Tiling version uses:
-
-```text
-BM = 64
-BN = 64
-BK = 16
-TM = 16
-```
-
-One block produces a `64 x 64` output tile. Its dimensions are `(64, 4)`, giving 256 threads. A thread owns one output column and 16 output rows:
-
-```text
-row = blockIdx.y * 64 + ty * 16 + local_row
-col = blockIdx.x * 64 + tx
-```
-
-The 16 partial sums remain in `float sum[16]`. During one reduction step, a thread loads one `B` value from shared memory and reuses it across all 16 accumulators. This increases register reuse and performs more arithmetic per shared-memory access than the one-output-per-thread version.
-
-The block still cooperatively fills `SA[64][16]` and `SB[16][64]`. Flattening the thread index makes loading independent of the output ownership mapping. Bounds are checked during cooperative loads and final stores, so partial tiles remain correct.
-
-#### V1: Two-Dimensional Thread Tiling
-
-The 2D Thread Tiling version uses:
-
-```text
-BM = 64
-BN = 64
-BK = 16
-TM = 8
-TN = 4
-```
-
-The block dimensions are `(16, 8)`, or 128 threads. Each thread owns an `8 x 4` micro-tile containing 32 output elements:
-
-```text
-row = blockIdx.y * 64 + ty * 8 + local_row
-col = blockIdx.x * 64 + tx * 4 + local_col
-```
-
-For one reduction position, the thread loads eight `A` values and four `B` values from shared memory into registers. Their outer product updates all 32 accumulators. Each `A` register contributes to four output columns, and each `B` register contributes to eight output rows. The thread therefore performs 32 multiply-add operations from only 12 shared-memory scalar loads.
-
-This is the central benefit of two-dimensional thread tiling: the mathematical work is unchanged, but both operands are reused in registers before another shared-memory access is required.
-
-#### V2: Vectorized `float4` Transfers
-
-V2 retains the `8 x 4` register micro-tile and changes the reduction tile to `BK = 32`. It uses `float4` for four adjacent values at a time in:
-
-- global-memory loads from `A` and `B`;
-- stores into shared memory;
-- shared-memory reads of adjacent `B` values;
-- final stores to adjacent columns of `C`.
-
-A vector load is valid only when its address is suitably aligned and all four elements exist. The vectorized kernel is therefore selected only when `N` and `K` are divisible by four. When either condition is false, `solve(...)` launches the scalar safe implementation. This fallback is necessary for the general LeetGPU interface; vectorization must not trade away correctness on irregular shapes.
-
-Within the optimized path, output rows in the final block are still guarded independently. Because `K` is a multiple of four, a valid four-column group is either fully inside the matrix or fully outside it.
-
-Vectorization reduces the number of memory instructions, but it does not reduce the required \(2MNK\) floating-point operations. Its benefit depends on alignment, instruction issue, and the balance between memory movement and arithmetic.
-
-#### V3: Register Prefetch and Double-Buffered Shared Memory
-
-V3 uses:
-
-```text
-BM = 64
-BN = 64
-BK = 16
-TM = 8
-TN = 4
-```
-
-It allocates two copies of each shared-memory tile:
-
-```text
-SA[2][64][16]
-SB[2][16][64]
-```
-
-The first tile is loaded before the main loop. For each later tile, a thread first issues global loads into private prefetch registers. It then computes from the current shared-memory buffer, waits until all threads have finished consuming that buffer, writes the prefetched values into the alternate buffer, and finally synchronizes before exchanging the read and write buffer indices.
-
-The intended pipeline is:
-
-```text
-tile i + 1: global memory -> prefetch registers
-tile i:     shared memory -> accumulator registers
-tile i + 1: prefetch registers -> alternate shared-memory buffer
-```
-
-This is software double buffering with register prefetch, not an asynchronous `cp.async` pipeline. The global loads are issued before the current tile is consumed, giving the compiler and GPU an opportunity to overlap outstanding memory operations with independent arithmetic. However, the implementation still needs block-wide barriers when a shared buffer changes roles.
-
-Double buffering is not automatically faster. It doubles shared-memory storage and adds prefetch registers, control flow, a pipeline prologue, and an epilogue. Those costs can reduce occupancy or offset hidden latency. In the measured workload, V3 is slightly slower than V2 on both tested GPUs, so the document reports it as a verified optimization experiment rather than claiming an improvement that was not observed.
-
-#### V4: `128 x 128` Output-Tile Experiment
-
-V4 changes the compile-time parameters to:
-
-```text
-BM = 128
-BN = 128
-BK = 16
-TM = 8
-TN = 4
-```
-
-The block contains `(128 / 4) x (128 / 8) = 32 x 16 = 512` threads. Each thread still owns 32 output elements, while the block collectively produces a `128 x 128` tile. Its double-buffered input storage occupies 32 KiB:
-
-```text
-2 * (128 * 16 + 16 * 128) * sizeof(float)
-```
-
-The larger output tile increases block-level reuse, but also doubles the thread count relative to V3 and changes register demand, occupancy, and scheduling. Repeated complete runs showed V3 consistently faster on the RTX 4090 and V4 consistently faster on the RTX 5070 Ti Laptop GPU.
-
-The result demonstrates that tile size is workload- and hardware-sensitive. The project does not select a kernel from the device name because a rule inferred from only two GPUs would not be general. V3 remains the explicit default, and V4 remains available as a documented alternative.
-
-The active implementation is selected in `02_Matrix_Multiplication.cu` by leaving exactly one include uncommented. The reusable run scripts may also select a method explicitly without editing the selector:
-
-```text
-bash scripts/run_cuda_remote.sh 02_Matrix_Multiplication <method>
-```
-
-### Solution
-
-The selector enables the default version. Expand any method below to view its complete source code.
-
-<details>
-<summary>Default Selector</summary>
-
-```cuda
-// Select exactly one implementation.
-// #include "02_Matrix_Multiplication_v0_naive.cu"
-// #include "02_Matrix_Multiplication_v1_shared_memory.cu"
-// #include "02_Matrix_Multiplication_v1_1d_thread_tiling.cu"
-// #include "02_Matrix_Multiplication_v1_2d_thread_tiling.cu"
-// #include "02_Matrix_Multiplication_v2_vectorized.cu"
-#include "02_Matrix_Multiplication_v3_double_buffered.cu"
-// #include "02_Matrix_Multiplication_v4_large_tile.cu"
-```
-
-</details>
-
-<details>
-<summary>V0 Naive</summary>
+#### Solution
 
 ```cuda
 #include <cuda_runtime.h>
@@ -329,10 +163,42 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 }
 ```
 
-</details>
+#### Test Result
 
-<details>
-<summary>V1 Original Shared Memory</summary>
+| Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
+|---|:---:|---:|---:|---:|---:|
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 384.666 ms | 342.381 ms | 445.092 ms | 1071.882 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | 83.107 ms | 82.699 ms | 83.530 ms | 4961.253 GFLOPS |
+
+### V1: Original `16 x 16` Shared-Memory Tiling
+
+#### Approach
+
+The original implementation keeps one output element per thread but divides the reduction dimension into tiles of 16. One `16 x 16` block produces one `16 x 16` tile of `C`.
+
+For reduction tile `tile`, thread `(ty, tx)` loads:
+
+```text
+A[row, tile * 16 + tx] -> A_shared[ty][tx]
+B[tile * 16 + ty, col] -> B_shared[ty][tx]
+```
+
+After all 256 threads finish loading, each `A` value is shared by the 16 threads computing different output columns, and each `B` value is shared by the 16 threads computing different output rows. Every thread then performs 16 multiply-add operations:
+
+```text
+S += A_shared[ty][inner] * B_shared[inner][tx]
+```
+
+<video controls width="760">
+  <source src="../assets/02_Matrix_Multiplication/video_02.mp4" type="video/mp4">
+  Your Markdown viewer does not support embedded video. Open [the shared-memory tiling animation](../assets/02_Matrix_Multiplication/video_02.mp4) directly.
+</video>
+
+Two barriers are necessary for every reduction tile. The first prevents computation from starting before the cooperative load is complete. The second prevents the next tile from overwriting shared memory before every thread has finished using the current tile.
+
+The last reduction tile may be incomplete. Invalid input coordinates are written to shared memory as zero rather than causing an early return. This zero padding contributes nothing to the dot product and lets every thread reach the same barriers, avoiding divergent synchronization. The output store is guarded separately by `row < M && col < K`.
+
+#### Solution
 
 ```cuda
 #include <cuda_runtime.h>
@@ -373,10 +239,38 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 }
 ```
 
-</details>
+#### Test Result
 
-<details>
-<summary>V1 1D Thread Tiling</summary>
+| Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
+|---|:---:|---:|---:|---:|---:|
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 242.443 ms | 217.389 ms | 290.510 ms | 1700.675 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | 59.324 ms | 58.925 ms | 59.929 ms | 6950.270 GFLOPS |
+
+### V1: One-Dimensional Thread Tiling
+
+#### Approach
+
+The 1D Thread Tiling version uses:
+
+```text
+BM = 64
+BN = 64
+BK = 16
+TM = 16
+```
+
+One block produces a `64 x 64` output tile. Its dimensions are `(64, 4)`, giving 256 threads. A thread owns one output column and 16 output rows:
+
+```text
+row = blockIdx.y * 64 + ty * 16 + local_row
+col = blockIdx.x * 64 + tx
+```
+
+The 16 partial sums remain in `float sum[16]`. During one reduction step, a thread loads one `B` value from shared memory and reuses it across all 16 accumulators. This increases register reuse and performs more arithmetic per shared-memory access than the one-output-per-thread version.
+
+The block still cooperatively fills `SA[64][16]` and `SB[16][64]`. Flattening the thread index makes loading independent of the output ownership mapping. Bounds are checked during cooperative loads and final stores, so partial tiles remain correct.
+
+#### Solution
 
 ```cuda
 #include <cuda_runtime.h>
@@ -443,10 +337,39 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 }
 ```
 
-</details>
+#### Test Result
 
-<details>
-<summary>V1 2D Thread Tiling</summary>
+| Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
+|---|:---:|---:|---:|---:|---:|
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 78.838 ms | 65.303 ms | 100.539 ms | 5229.916 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | 19.505 ms | 19.444 ms | 19.528 ms | 21138.901 GFLOPS |
+
+### V1: Two-Dimensional Thread Tiling
+
+#### Approach
+
+The 2D Thread Tiling version uses:
+
+```text
+BM = 64
+BN = 64
+BK = 16
+TM = 8
+TN = 4
+```
+
+The block dimensions are `(16, 8)`, or 128 threads. Each thread owns an `8 x 4` micro-tile containing 32 output elements:
+
+```text
+row = blockIdx.y * 64 + ty * 8 + local_row
+col = blockIdx.x * 64 + tx * 4 + local_col
+```
+
+For one reduction position, the thread loads eight `A` values and four `B` values from shared memory into registers. Their outer product updates all 32 accumulators. Each `A` register contributes to four output columns, and each `B` register contributes to eight output rows. The thread therefore performs 32 multiply-add operations from only 12 shared-memory scalar loads.
+
+This is the central benefit of two-dimensional thread tiling: the mathematical work is unchanged, but both operands are reused in registers before another shared-memory access is required.
+
+#### Solution
 
 ```cuda
 #include <cuda_runtime.h>
@@ -523,13 +446,38 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 }
 ```
 
-</details>
+#### Test Result
 
-<details>
-<summary>V2 Vectorized</summary>
+| Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
+|---|:---:|---:|---:|---:|---:|
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 53.735 ms | 50.348 ms | 70.620 ms | 7673.130 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | 13.354 ms | 12.488 ms | 13.925 ms | 30875.503 GFLOPS |
+
+### V2: Vectorized `float4` Transfers (`BK = 32`)
+
+#### Approach
+
+V2 retains the `8 x 4` register micro-tile and changes the reduction tile to `BK = 32`. It uses `float4` for four adjacent values at a time in:
+
+- global-memory loads from `A` and `B`;
+- stores into shared memory;
+- shared-memory reads of adjacent `B` values;
+- final stores to adjacent columns of `C`.
+
+A vector load is valid only when its address is suitably aligned and all four elements exist. The vectorized kernel is therefore selected only when `N` and `K` are divisible by four. When either condition is false, `solve(...)` launches the scalar safe implementation. This fallback is necessary for the general LeetGPU interface; vectorization must not trade away correctness on irregular shapes.
+
+Within the optimized path, output rows in the final block are still guarded independently. Because `K` is a multiple of four, a valid four-column group is either fully inside the matrix or fully outside it.
+
+Vectorization reduces the number of memory instructions, but it does not reduce the required \(2MNK\) floating-point operations. Its benefit depends on alignment, instruction issue, and the balance between memory movement and arithmetic.
+
+#### Solution
 
 ```cuda
 #include <cuda_runtime.h>
+
+#ifndef MATMUL_V2_BK
+#define MATMUL_V2_BK 32
+#endif
 
 __global__ void scalar_fallback(const float* A, const float* B, float* C,
                                 int M, int N, int K) {
@@ -543,7 +491,8 @@ __global__ void scalar_fallback(const float* A, const float* B, float* C,
     C[row * K + col] = sum;
 }
 
-template <int BM = 64, int BN = 64, int BK = 32, int TM = 8, int TN = 4>
+template <int BM = 64, int BN = 64, int BK = MATMUL_V2_BK,
+          int TM = 8, int TN = 4>
 __global__ void matrix_multiplication_v2(const float* __restrict__ A,
                                          const float* __restrict__ B,
                                          float* __restrict__ C,
@@ -619,7 +568,8 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
         const dim3 grid((K + 15) / 16, (M + 15) / 16);
         scalar_fallback<<<grid, block>>>(A, B, C, M, N, K);
     } else {
-        constexpr int BM = 64, BN = 64, BK = 32, TM = 8, TN = 4;
+        constexpr int BM = 64, BN = 64, BK = MATMUL_V2_BK;
+        constexpr int TM = 8, TN = 4;
         const dim3 block(BN / TN, BM / TM);
         const dim3 grid((K + BN - 1) / BN, (M + BM - 1) / BM);
         matrix_multiplication_v2<BM, BN, BK, TM, TN>
@@ -629,10 +579,72 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 }
 ```
 
-</details>
+#### Test Result
 
-<details>
-<summary>V3 Double Buffered</summary>
+| Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
+|---|:---:|---:|---:|---:|---:|
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 37.630 ms | 33.509 ms | 40.608 ms | 10957.192 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | 11.526 ms | 11.359 ms | 11.717 ms | 35773.893 GFLOPS |
+
+### V2 Control: Vectorized Single Buffer (`BK = 16`)
+
+#### Approach
+
+This control version compiles the same single-buffered V2 kernel with `BK = 16`, matching the reduction-tile depth used by V3. All other V2 work ownership, vectorized transfers, register micro-tile, boundary fallback, and launch geometry remain unchanged.
+
+The matched configuration separates the effect of reduction-tile depth from the effect of double buffering. On both tested GPUs, the single-buffered `BK = 16` control remains faster than V3. Therefore, V3's lower measured performance cannot be explained only by comparing V2's original `BK = 32` against V3's `BK = 16`; the additional prefetch registers, two shared-memory buffers, buffer switching, and synchronization also fail to repay their cost in this implementation.
+
+#### Solution
+
+```cuda
+#define MATMUL_V2_BK 16
+
+#include "02_Matrix_Multiplication_v2_vectorized.cu"
+```
+
+#### Test Result
+
+| Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
+|---|:---:|---:|---:|---:|---:|
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 38.951 ms | 36.741 ms | 41.201 ms | 10585.661 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | 11.035 ms | 10.414 ms | 11.805 ms | 37364.875 GFLOPS |
+
+### V3: Register Prefetch and Double-Buffered Shared Memory
+
+#### Approach
+
+V3 uses:
+
+```text
+BM = 64
+BN = 64
+BK = 16
+TM = 8
+TN = 4
+```
+
+It allocates two copies of each shared-memory tile:
+
+```text
+SA[2][64][16]
+SB[2][16][64]
+```
+
+The first tile is loaded before the main loop. For each later tile, a thread first issues global loads into private prefetch registers. It then computes from the current shared-memory buffer, waits until all threads have finished consuming that buffer, writes the prefetched values into the alternate buffer, and finally synchronizes before exchanging the read and write buffer indices.
+
+The intended pipeline is:
+
+```text
+tile i + 1: global memory -> prefetch registers
+tile i:     shared memory -> accumulator registers
+tile i + 1: prefetch registers -> alternate shared-memory buffer
+```
+
+This is software double buffering with register prefetch, not an asynchronous `cp.async` pipeline. The global loads are issued before the current tile is consumed, giving the compiler and GPU an opportunity to overlap outstanding memory operations with independent arithmetic. However, the implementation still needs block-wide barriers when a shared buffer changes roles.
+
+Double buffering is not automatically faster. It doubles shared-memory storage and adds prefetch registers, control flow, a pipeline prologue, and an epilogue. Those costs can reduce occupancy or offset hidden latency. In the measured workload, V3 is slightly slower than V2 on both tested GPUs, so the document reports it as a verified optimization experiment rather than claiming an improvement that was not observed.
+
+#### Solution
 
 ```cuda
 #include <cuda_runtime.h>
@@ -807,10 +819,38 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 #endif
 ```
 
-</details>
+#### Test Result
 
-<details>
-<summary>V4 Large Tile</summary>
+| Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
+|---|:---:|---:|---:|---:|---:|
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 39.856 ms | 38.156 ms | 41.806 ms | 10345.265 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | 12.214 ms | 11.304 ms | 12.783 ms | 33758.222 GFLOPS |
+
+### V4: `128 x 128` Output Tile
+
+#### Approach
+
+V4 changes the compile-time parameters to:
+
+```text
+BM = 128
+BN = 128
+BK = 16
+TM = 8
+TN = 4
+```
+
+The block contains `(128 / 4) x (128 / 8) = 32 x 16 = 512` threads. Each thread still owns 32 output elements, while the block collectively produces a `128 x 128` tile. Its double-buffered input storage occupies 32 KiB:
+
+```text
+2 * (128 * 16 + 16 * 128) * sizeof(float)
+```
+
+The larger output tile increases block-level reuse and amortizes input-tile loads across more output elements, while retaining V3's register-prefetch and double-buffer structure. It also raises the block thread count and changes register demand, occupancy, and scheduling, so the result must be measured rather than assumed.
+
+Under the revised benchmark—deterministic nonzero inputs, five warm-up iterations, and ten measured iterations—V4 is the fastest project CUDA version on both tested GPUs. It is therefore selected as the default without any device-name dispatch. This does not mean that a `128 x 128` tile is universally optimal; it means that V4 is the strongest verified common default among the implementations currently in this project.
+
+#### Solution
 
 ```cuda
 #define MATMUL_BM 128
@@ -822,7 +862,39 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 #include "02_Matrix_Multiplication_v3_double_buffered.cu"
 ```
 
-</details>
+#### Test Result
+
+| Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
+|---|:---:|---:|---:|---:|---:|
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 32.567 ms | 30.380 ms | 34.811 ms | 12660.545 GFLOPS |
+| NVIDIA GeForce RTX 4090 | PASS | 10.284 ms | 9.941 ms | 10.721 ms | 40094.689 GFLOPS |
+
+### Default Selection
+
+V4 is the active implementation because it produced the lowest average time on both tested GPUs under the revised common benchmark. Exactly one include remains active in the selector:
+
+```cuda
+// Select exactly one implementation.
+// #include "02_Matrix_Multiplication_v0_naive.cu"
+// #include "02_Matrix_Multiplication_v1_shared_memory.cu"
+// #include "02_Matrix_Multiplication_v1_1d_thread_tiling.cu"
+// #include "02_Matrix_Multiplication_v1_2d_thread_tiling.cu"
+// #include "02_Matrix_Multiplication_v2_vectorized.cu"
+// #include "02_Matrix_Multiplication_v3_double_buffered.cu"
+#include "02_Matrix_Multiplication_v4_large_tile.cu"
+```
+
+A specific method can still be selected without editing the selector:
+
+```bash
+bash scripts/run_cuda_remote.sh 02_Matrix_Multiplication <method>
+```
+
+### Test Methodology
+
+All CUDA methods use the same test file and must pass seven correctness shapes, including scalar, rectangular, aligned, and non-aligned dimensions. The checker rejects non-finite output values before applying its numerical tolerance.
+
+The performance case uses `M=8192`, `N=6144`, and `K=4096`. Inputs are initialized with deterministic nonzero values so that zero-filled allocations do not produce an unrepresentative memory behavior. Five warm-up iterations run before ten CUDA-event measurements. The tables above report the average, minimum, maximum, and calculated floating-point throughput from those ten measurements.
 
 ### Test Code
 
@@ -896,27 +968,6 @@ int main() {
     return 0;
 }
 ```
-
-### Test Result
-
-All methods use `M=8192, N=6144, K=4096` and three measured iterations.
-
-| Method | Platform | Status | Average Time | Minimum Time | Maximum Time | Performance |
-|---|---|:---:|---:|---:|---:|---:|
-| V0 Naive | NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 348.822 ms | 303.296 ms | 408.415 ms | 1182.026 GFLOPS |
-| V0 Naive | NVIDIA GeForce RTX 4090 | PASS | 83.949 ms | 83.063 ms | 85.607 ms | 4911.543 GFLOPS |
-| V1 Original Shared Memory | NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 242.778 ms | 215.807 ms | 296.659 ms | 1698.330 GFLOPS |
-| V1 Original Shared Memory | NVIDIA GeForce RTX 4090 | PASS | 61.351 ms | 59.362 ms | 65.267 ms | 6720.632 GFLOPS |
-| V1 1D Thread Tiling | NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 60.158 ms | 59.850 ms | 60.709 ms | 6853.909 GFLOPS |
-| V1 1D Thread Tiling | NVIDIA GeForce RTX 4090 | PASS | 19.508 ms | 19.498 ms | 19.514 ms | 21135.588 GFLOPS |
-| V1 2D Thread Tiling | NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 45.858 ms | 44.093 ms | 48.239 ms | 8991.259 GFLOPS |
-| V1 2D Thread Tiling | NVIDIA GeForce RTX 4090 | PASS | 12.540 ms | 12.421 ms | 12.771 ms | 32880.130 GFLOPS |
-| V2 Vectorized | NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 33.253 ms | 31.828 ms | 34.445 ms | 12399.341 GFLOPS |
-| V2 Vectorized | NVIDIA GeForce RTX 4090 | PASS | 8.642 ms | 8.641 ms | 8.643 ms | 47711.609 GFLOPS |
-| V3 Double Buffered | NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 33.903 ms | 30.154 ms | 37.208 ms | 12161.818 GFLOPS |
-| V3 Double Buffered | NVIDIA GeForce RTX 4090 | PASS | 8.944 ms | 8.737 ms | 9.351 ms | 46098.288 GFLOPS |
-| V4 Large Tile | NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 29.029 ms | 28.421 ms | 29.768 ms | 14203.795 GFLOPS |
-| V4 Large Tile | NVIDIA GeForce RTX 4090 | PASS | 9.454 ms | 9.017 ms | 10.093 ms | 43611.750 GFLOPS |
 
 ## Triton
 

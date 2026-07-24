@@ -100,7 +100,8 @@ static bool run_correctness_case(const MatrixShape& shape) {
             }
             const float actual = c[static_cast<size_t>(row) * k + col];
             const float tolerance = 1e-4f * std::max(1.0f, std::fabs(expected));
-            if (std::fabs(actual - expected) > tolerance) {
+            if (!std::isfinite(actual) ||
+                std::fabs(actual - expected) > tolerance) {
                 if (errors < 5) {
                     std::cerr << "Mismatch at (" << row << ", " << col << "): "
                               << actual << " != " << expected << '\n';
@@ -122,12 +123,21 @@ static bool run_correctness_case(const MatrixShape& shape) {
     return true;
 }
 
+__global__ void fill_buffer(float* values, size_t count, float scale) {
+    const size_t index =
+        static_cast<size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+    if (index < count) {
+        const int centered = static_cast<int>(index % 17) - 8;
+        values[index] = static_cast<float>(centered) * scale;
+    }
+}
+
 static bool run_performance_test() {
     constexpr int m = 8192;
     constexpr int n = 6144;
     constexpr int k = 4096;
-    constexpr int warmup_iterations = 1;
-    constexpr int measured_iterations = 3;
+    constexpr int warmup_iterations = 5;
+    constexpr int measured_iterations = 10;
     const size_t a_count = static_cast<size_t>(m) * n;
     const size_t b_count = static_cast<size_t>(n) * k;
     const size_t c_count = static_cast<size_t>(m) * k;
@@ -137,9 +147,18 @@ static bool run_performance_test() {
     DeviceBuffer<float> d_c;
     if (!d_a.allocate(a_count, "performance cudaMalloc(d_a)") ||
         !d_b.allocate(b_count, "performance cudaMalloc(d_b)") ||
-        !d_c.allocate(c_count, "performance cudaMalloc(d_c)") ||
-        !cuda_ok(cudaMemset(d_a.get(), 0, a_count * sizeof(float)), "performance memset a") ||
-        !cuda_ok(cudaMemset(d_b.get(), 0, b_count * sizeof(float)), "performance memset b")) {
+        !d_c.allocate(c_count, "performance cudaMalloc(d_c)")) {
+        return false;
+    }
+
+    constexpr int fill_threads = 256;
+    fill_buffer<<<(a_count + fill_threads - 1) / fill_threads, fill_threads>>>(
+        d_a.get(), a_count, 1.0f / 16.0f);
+    fill_buffer<<<(b_count + fill_threads - 1) / fill_threads, fill_threads>>>(
+        d_b.get(), b_count, 1.0f / 16.0f);
+    if (!cuda_ok(cudaGetLastError(), "performance input initialization") ||
+        !cuda_ok(cudaDeviceSynchronize(),
+                 "performance input initialization synchronize")) {
         return false;
     }
 
