@@ -58,3 +58,10 @@
 | 2026-07-25 04:20:21 CST | `02_Matrix_Multiplication` | `v4_large_tile` | NVIDIA GeForce RTX 5070 Ti Laptop GPU | **PASS** | M=8192, N=6144, K=4096 | 3 | 29.496 ms | 29.891 ms | 28.998 ms | 13978.687 GFLOPS |
 | 2026-07-25 04:20:34 CST | `02_Matrix_Multiplication` | `v4_large_tile` | NVIDIA GeForce RTX 5070 Ti Laptop GPU | **PASS** | M=8192, N=6144, K=4096 | 3 | 29.029 ms | 29.768 ms | 28.421 ms | 14203.795 GFLOPS |
 | 2026-07-25 04:23:56 CST | `02_Matrix_Multiplication` | `default` | NVIDIA GeForce RTX 4090 | **PASS** | M=8192, N=6144, K=4096 | 3 | 8.740 ms | 8.742 ms | 8.738 ms | 47178.031 GFLOPS |
+| 2026-07-25 04:37:47 CST | `02_Matrix_Multiplication` | `v3_double_buffered` | NVIDIA GeForce RTX 4090 | **PASS** | M=8192, N=6144, K=4096 | 3 | 9.178 ms | 9.442 ms | 9.045 ms | 44926.801 GFLOPS |
+| 2026-07-25 04:37:59 CST | `02_Matrix_Multiplication` | `v3_double_buffered` | NVIDIA GeForce RTX 4090 | **PASS** | M=8192, N=6144, K=4096 | 3 | 9.044 ms | 9.046 ms | 9.043 ms | 45590.745 GFLOPS |
+| 2026-07-25 04:38:10 CST | `02_Matrix_Multiplication` | `v3_double_buffered` | NVIDIA GeForce RTX 4090 | **PASS** | M=8192, N=6144, K=4096 | 3 | 9.044 ms | 9.048 ms | 9.039 ms | 45590.904 GFLOPS |
+| 2026-07-25 04:38:56 CST | `02_Matrix_Multiplication` | `v3_double_buffered` | NVIDIA GeForce RTX 4090 | **PASS** | M=8192, N=6144, K=4096 | 3 | 9.062 ms | 9.064 ms | 9.060 ms | 45498.177 GFLOPS |
+| 2026-07-25 04:39:56 CST | `02_Matrix_Multiplication` | `v3_double_buffered` | NVIDIA GeForce RTX 4090 | **PASS** | M=8192, N=6144, K=4096 | 3 | 9.060 ms | 9.062 ms | 9.056 ms | 45510.979 GFLOPS |
+| 2026-07-25 04:40:09 CST | `02_Matrix_Multiplication` | `v3_double_buffered` | NVIDIA GeForce RTX 4090 | **PASS** | M=8192, N=6144, K=4096 | 3 | 9.038 ms | 9.041 ms | 9.035 ms | 45619.527 GFLOPS |
+| 2026-07-25 04:42:11 CST | `02_Matrix_Multiplication` | `v3_double_buffered` | NVIDIA GeForce RTX 4090 | **PASS** | M=8192, N=6144, K=4096 | 3 | 8.944 ms | 9.351 ms | 8.737 ms | 46098.288 GFLOPS |

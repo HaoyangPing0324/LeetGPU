@@ -90,37 +90,191 @@ Matrix \(C\) (\(1 \times 1\)):
 
 ### Approach
 
-The CUDA solution is organized as an optimization sequence. Every version implements the same LeetGPU contract, `A[M, N] x B[N, K] = C[M, K]`, and is checked with the same correctness cases. The versions differ only in how work and data movement are organized.
+The challenge multiplies `A[M, N]` by `B[N, K]` and stores `C[M, K]`. One output element is the inner product of a row from `A` and a column from `B`:
 
-#### V0: Naive
+\[
+C[\text{row},\text{col}]
+=
+\sum_{\text{inner}=0}^{N-1}
+A[\text{row},\text{inner}]
+\times
+B[\text{inner},\text{col}].
+\]
 
-Each two-dimensional CUDA thread computes one output element. It reads one complete row of `A` and one complete column of `B` directly from global memory. This is the clearest mapping from the matrix definition, but adjacent threads repeatedly load values that could have been shared.
+Because the matrices are row-major, the three linear addresses are:
 
-#### V1: Original Shared-Memory Tiling
+```text
+A[row, inner] -> A[row * N + inner]
+B[inner, col] -> B[inner * K + col]
+C[row, col]   -> C[row * K + col]
+```
 
-This is the project's original implementation. A `16 x 16` block computes a `16 x 16` output tile. Threads cooperatively stage one tile from each input in shared memory, synchronize, and reuse those values for 16 multiply-add operations. Zero-filled boundary loads support dimensions that are not multiples of 16.
+Every `(row, col)` output coordinate is independent. CUDA therefore parallelizes the two output dimensions, while the reduction over `N` remains inside a thread or a thread-owned output tile.
+
+![Inner-product view of matrix multiplication](../assets/02_Matrix_Multiplication/image_01.webp)
+
+*One output element combines one row of `A` with one column of `B`.*
+
+<video controls width="760">
+  <source src="../assets/02_Matrix_Multiplication/video_01.mp4" type="video/mp4">
+  Your Markdown viewer does not support embedded video. Open [the output-element animation](../assets/02_Matrix_Multiplication/video_01.mp4) directly.
+</video>
+
+The CUDA files form an optimization sequence. Every version preserves the same `solve(...)` interface and mathematical result. The versions differ in how much output work is assigned to each thread and how data moves through global memory, shared memory, and registers.
+
+#### V0: Naive Global-Memory Kernel
+
+V0 launches a two-dimensional grid with `16 x 16` threads per block. Each thread computes its output coordinate as:
+
+```text
+row = blockIdx.y * blockDim.y + threadIdx.y
+col = blockIdx.x * blockDim.x + threadIdx.x
+```
+
+The grid uses ceiling division in both output dimensions. A thread first checks `row < M && col < K`; a valid thread then computes one complete dot product and writes one element of `C`.
+
+This mapping is direct and easy to verify, but it repeatedly fetches reusable data from global memory. Threads in the same output row all need the same row of `A`, while threads in the same output column need the same column of `B`. V0 does not preserve that reuse on chip, so the same values may be loaded many times.
+
+#### V1: Original `16 x 16` Shared-Memory Tiling
+
+The original implementation keeps one output element per thread but divides the reduction dimension into tiles of 16. One `16 x 16` block produces one `16 x 16` tile of `C`.
+
+For reduction tile `tile`, thread `(ty, tx)` loads:
+
+```text
+A[row, tile * 16 + tx] -> A_shared[ty][tx]
+B[tile * 16 + ty, col] -> B_shared[ty][tx]
+```
+
+After all 256 threads finish loading, each `A` value is shared by the 16 threads computing different output columns, and each `B` value is shared by the 16 threads computing different output rows. Every thread then performs 16 multiply-add operations:
+
+```text
+S += A_shared[ty][inner] * B_shared[inner][tx]
+```
+
+<video controls width="760">
+  <source src="../assets/02_Matrix_Multiplication/video_02.mp4" type="video/mp4">
+  Your Markdown viewer does not support embedded video. Open [the shared-memory tiling animation](../assets/02_Matrix_Multiplication/video_02.mp4) directly.
+</video>
+
+Two barriers are necessary for every reduction tile. The first prevents computation from starting before the cooperative load is complete. The second prevents the next tile from overwriting shared memory before every thread has finished using the current tile.
+
+The last reduction tile may be incomplete. Invalid input coordinates are written to shared memory as zero rather than causing an early return. This zero padding contributes nothing to the dot product and lets every thread reach the same barriers, avoiding divergent synchronization. The output store is guarded separately by `row < M && col < K`.
 
 #### V1: One-Dimensional Thread Tiling
 
-A block computes a `64 x 64` output tile. Instead of producing one result, each thread accumulates 16 output rows for one output column. This increases register reuse of each loaded `B` value and reduces the number of threads required for the same output area.
+The 1D Thread Tiling version uses:
+
+```text
+BM = 64
+BN = 64
+BK = 16
+TM = 16
+```
+
+One block produces a `64 x 64` output tile. Its dimensions are `(64, 4)`, giving 256 threads. A thread owns one output column and 16 output rows:
+
+```text
+row = blockIdx.y * 64 + ty * 16 + local_row
+col = blockIdx.x * 64 + tx
+```
+
+The 16 partial sums remain in `float sum[16]`. During one reduction step, a thread loads one `B` value from shared memory and reuses it across all 16 accumulators. This increases register reuse and performs more arithmetic per shared-memory access than the one-output-per-thread version.
+
+The block still cooperatively fills `SA[64][16]` and `SB[16][64]`. Flattening the thread index makes loading independent of the output ownership mapping. Bounds are checked during cooperative loads and final stores, so partial tiles remain correct.
 
 #### V1: Two-Dimensional Thread Tiling
 
-Each thread accumulates an `8 x 4` micro-tile of `C`. Values from shared memory are first loaded into small register arrays, then reused across the 32 outputs owned by the thread. This raises arithmetic work per shared-memory access and substantially improves throughput.
+The 2D Thread Tiling version uses:
 
-#### V2: Vectorized Memory Access
+```text
+BM = 64
+BN = 64
+BK = 16
+TM = 8
+TN = 4
+```
 
-The two-dimensional register tile is retained, while aligned global and shared-memory transfers use `float4`. Four adjacent values are moved by one vector operation. The optimized path is used only when the reduction and output-column dimensions are multiples of four; other shapes use a safe scalar fallback, so the LeetGPU boundary cases remain valid.
+The block dimensions are `(16, 8)`, or 128 threads. Each thread owns an `8 x 4` micro-tile containing 32 output elements:
 
-#### V3: Double Buffering
+```text
+row = blockIdx.y * 64 + ty * 8 + local_row
+col = blockIdx.x * 64 + tx * 4 + local_col
+```
 
-Two shared-memory buffers are used alternately. While the current tile is consumed, the next tile is prefetched into registers. After computation, the prefetched values are committed to the other shared-memory buffer. This overlaps part of global-memory latency with arithmetic, although the measured gain depends on register pressure, synchronization, and tile shape.
+For one reduction position, the thread loads eight `A` values and four `B` values from shared memory into registers. Their outer product updates all 32 accumulators. Each `A` register contributes to four output columns, and each `B` register contributes to eight output rows. The thread therefore performs 32 multiply-add operations from only 12 shared-memory scalar loads.
 
-#### V4: Larger Output Tile
+This is the central benefit of two-dimensional thread tiling: the mathematical work is unchanged, but both operands are reused in registers before another shared-memory access is required.
 
-This project-specific experiment expands the output block from `64 x 64` to `128 x 128` while retaining an `8 x 4` thread micro-tile. It improves the verified 5070 Ti result but is slower on the 4090, demonstrating that a larger tile is not universally better.
+#### V2: Vectorized `float4` Transfers
 
-Three additional complete runs of V3 and V4 were performed on each GPU. V3 remained consistently faster on the RTX 4090, while V4 remained consistently faster on the RTX 5070 Ti Laptop GPU. The project therefore keeps V3 as the simple default and presents V4 as a platform-sensitive experiment rather than hard-coding a device-specific dispatch rule.
+V2 retains the `8 x 4` register micro-tile and changes the reduction tile to `BK = 32`. It uses `float4` for four adjacent values at a time in:
+
+- global-memory loads from `A` and `B`;
+- stores into shared memory;
+- shared-memory reads of adjacent `B` values;
+- final stores to adjacent columns of `C`.
+
+A vector load is valid only when its address is suitably aligned and all four elements exist. The vectorized kernel is therefore selected only when `N` and `K` are divisible by four. When either condition is false, `solve(...)` launches the scalar safe implementation. This fallback is necessary for the general LeetGPU interface; vectorization must not trade away correctness on irregular shapes.
+
+Within the optimized path, output rows in the final block are still guarded independently. Because `K` is a multiple of four, a valid four-column group is either fully inside the matrix or fully outside it.
+
+Vectorization reduces the number of memory instructions, but it does not reduce the required \(2MNK\) floating-point operations. Its benefit depends on alignment, instruction issue, and the balance between memory movement and arithmetic.
+
+#### V3: Register Prefetch and Double-Buffered Shared Memory
+
+V3 uses:
+
+```text
+BM = 64
+BN = 64
+BK = 16
+TM = 8
+TN = 4
+```
+
+It allocates two copies of each shared-memory tile:
+
+```text
+SA[2][64][16]
+SB[2][16][64]
+```
+
+The first tile is loaded before the main loop. For each later tile, a thread first issues global loads into private prefetch registers. It then computes from the current shared-memory buffer, waits until all threads have finished consuming that buffer, writes the prefetched values into the alternate buffer, and finally synchronizes before exchanging the read and write buffer indices.
+
+The intended pipeline is:
+
+```text
+tile i + 1: global memory -> prefetch registers
+tile i:     shared memory -> accumulator registers
+tile i + 1: prefetch registers -> alternate shared-memory buffer
+```
+
+This is software double buffering with register prefetch, not an asynchronous `cp.async` pipeline. The global loads are issued before the current tile is consumed, giving the compiler and GPU an opportunity to overlap outstanding memory operations with independent arithmetic. However, the implementation still needs block-wide barriers when a shared buffer changes roles.
+
+Double buffering is not automatically faster. It doubles shared-memory storage and adds prefetch registers, control flow, a pipeline prologue, and an epilogue. Those costs can reduce occupancy or offset hidden latency. In the measured workload, V3 is slightly slower than V2 on both tested GPUs, so the document reports it as a verified optimization experiment rather than claiming an improvement that was not observed.
+
+#### V4: `128 x 128` Output-Tile Experiment
+
+V4 changes the compile-time parameters to:
+
+```text
+BM = 128
+BN = 128
+BK = 16
+TM = 8
+TN = 4
+```
+
+The block contains `(128 / 4) x (128 / 8) = 32 x 16 = 512` threads. Each thread still owns 32 output elements, while the block collectively produces a `128 x 128` tile. Its double-buffered input storage occupies 32 KiB:
+
+```text
+2 * (128 * 16 + 16 * 128) * sizeof(float)
+```
+
+The larger output tile increases block-level reuse, but also doubles the thread count relative to V3 and changes register demand, occupancy, and scheduling. Repeated complete runs showed V3 consistently faster on the RTX 4090 and V4 consistently faster on the RTX 5070 Ti Laptop GPU.
+
+The result demonstrates that tile size is workload- and hardware-sensitive. The project does not select a kernel from the device name because a rule inferred from only two GPUs would not be general. V3 remains the explicit default, and V4 remains available as a documented alternative.
 
 The active implementation is selected in `02_Matrix_Multiplication.cu` by leaving exactly one include uncommented. The reusable run scripts may also select a method explicitly without editing the selector:
 
@@ -760,7 +914,7 @@ All methods use `M=8192, N=6144, K=4096` and three measured iterations.
 | V2 Vectorized | NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 33.253 ms | 31.828 ms | 34.445 ms | 12399.341 GFLOPS |
 | V2 Vectorized | NVIDIA GeForce RTX 4090 | PASS | 8.642 ms | 8.641 ms | 8.643 ms | 47711.609 GFLOPS |
 | V3 Double Buffered | NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 33.903 ms | 30.154 ms | 37.208 ms | 12161.818 GFLOPS |
-| V3 Double Buffered | NVIDIA GeForce RTX 4090 | PASS | 8.740 ms | 8.738 ms | 8.742 ms | 47178.031 GFLOPS |
+| V3 Double Buffered | NVIDIA GeForce RTX 4090 | PASS | 8.944 ms | 8.737 ms | 9.351 ms | 46098.288 GFLOPS |
 | V4 Large Tile | NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 29.029 ms | 28.421 ms | 29.768 ms | 14203.795 GFLOPS |
 | V4 Large Tile | NVIDIA GeForce RTX 4090 | PASS | 9.454 ms | 9.017 ms | 10.093 ms | 43611.750 GFLOPS |
 
@@ -1079,6 +1233,6 @@ if __name__ == "__main__":
 
 ## Acknowledgements
 
-Special thanks to [Du Ziyuan](https://dlog.com.cn/) for his detailed article on CUDA matrix multiplication. Its clear explanations, diagrams, and animations provided valuable guidance for this document.
+This document adapts explanatory material, diagrams, and animations from Du Ziyuan's article, [CUDA Learning Journey [11] — A Detailed Explanation of Matrix Multiplication](https://dlog.com.cn/posts/cuda11/matmul/). The original work is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). The adapted documentation and locally reproduced media are distributed under the same license. Changes include restructuring the explanation around the LeetGPU interface, matching the discussion and code to this project's implementations, and adding project-specific tests and measured results.
 
 > Follow the [LeetGPU repository](https://github.com/HaoyangPing0324/LeetGPU) for more.
