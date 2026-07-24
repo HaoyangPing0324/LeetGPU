@@ -869,27 +869,6 @@ Under the revised benchmark—deterministic nonzero inputs, five warm-up iterati
 | NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 32.567 ms | 30.380 ms | 34.811 ms | 12660.545 GFLOPS |
 | NVIDIA GeForce RTX 4090 | PASS | 10.284 ms | 9.941 ms | 10.721 ms | 40094.689 GFLOPS |
 
-### Default Selection
-
-V4 is the active implementation because it produced the lowest average time on both tested GPUs under the revised common benchmark. Exactly one include remains active in the selector:
-
-```cuda
-// Select exactly one implementation.
-// #include "02_Matrix_Multiplication_v0_naive.cu"
-// #include "02_Matrix_Multiplication_v1_shared_memory.cu"
-// #include "02_Matrix_Multiplication_v1_1d_thread_tiling.cu"
-// #include "02_Matrix_Multiplication_v1_2d_thread_tiling.cu"
-// #include "02_Matrix_Multiplication_v2_vectorized.cu"
-// #include "02_Matrix_Multiplication_v3_double_buffered.cu"
-#include "02_Matrix_Multiplication_v4_large_tile.cu"
-```
-
-A specific method can still be selected without editing the selector:
-
-```bash
-bash scripts/run_cuda_remote.sh 02_Matrix_Multiplication <method>
-```
-
 ### Test Methodology
 
 All CUDA methods use the same test file and must pass seven correctness shapes, including scalar, rectangular, aligned, and non-aligned dimensions. The checker rejects non-finite output values before applying its numerical tolerance.
