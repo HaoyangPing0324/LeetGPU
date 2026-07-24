@@ -111,6 +111,8 @@ C[row, col]   -> C[row * K + col]
 
 Every `(row, col)` output coordinate is independent. CUDA therefore parallelizes the two output dimensions, while the reduction over `N` remains inside a thread or a thread-owned output tile.
 
+A conventional CPU implementation expresses this as three nested loops: two loops enumerate the \(M \times K\) output matrix, and the innermost loop performs the length-\(N\) reduction. The arithmetic complexity is \(O(MNK)\). GPU optimization does not change that arithmetic count; it changes where the loops execute, how many outputs are computed together, and how often values are fetched from each level of the memory hierarchy.
+
 ![Inner-product view of matrix multiplication](../assets/02_Matrix_Multiplication/image_01.webp)
 
 *One output element combines one row of `A` with one column of `B`.*
@@ -121,6 +123,22 @@ Every `(row, col)` output coordinate is independent. CUDA therefore parallelizes
 </video>
 
 The CUDA files form an optimization sequence. Every version preserves the same `solve(...)` interface and mathematical result. The versions differ in how much output work is assigned to each thread and how data moves through global memory, shared memory, and registers.
+
+The progression follows two related goals:
+
+1. **Increase reuse.** Values first read from global memory should contribute to several output elements before being discarded. Shared-memory tiling enables reuse across a block, while thread tiling enables further reuse inside registers.
+2. **Overlap or accelerate movement and computation.** Vectorized transfers reduce load/store instruction overhead, software and hardware pipelines overlap adjacent reduction tiles, and Tensor Cores replace scalar FP32 multiply-add instructions when reduced TF32 input precision is acceptable.
+
+| Version | Main change | Work owned by one thread or warp |
+|---|---|---|
+| V0 | Direct global-memory dot products | One output element per thread |
+| V1 shared | Cooperative shared-memory tiling | One output element per thread |
+| V1 1D | Register reuse along the row dimension | `16 x 1` outputs per thread |
+| V1 2D | Register-level outer products | `8 x 4` outputs per thread |
+| V2 | `float4` cooperative transfers | `8 x 4` outputs per thread |
+| V3 | Register prefetch plus two shared-memory buffers | `8 x 4` outputs per thread |
+| V4 | Hardware-asynchronous `cp.async` transfers | `8 x 4` outputs per thread |
+| V5 | WMMA TF32 Tensor Core operations | One `16 x 16` output tile per warp |
 
 ### V0: Naive Global-Memory Kernel
 
@@ -135,7 +153,9 @@ col = blockIdx.x * blockDim.x + threadIdx.x
 
 The grid uses ceiling division in both output dimensions. A thread first checks `row < M && col < K`; a valid thread then computes one complete dot product and writes one element of `C`.
 
-This mapping is direct and easy to verify, but it repeatedly fetches reusable data from global memory. Threads in the same output row all need the same row of `A`, while threads in the same output column need the same column of `B`. V0 does not preserve that reuse on chip, so the same values may be loaded many times.
+This mapping replaces the two outer CPU loops with a two-dimensional CUDA grid, but each thread still performs the complete inner reduction serially. It is direct and easy to verify.
+
+Its weakness is data movement. Two threads computing `C[row, col0]` and `C[row, col1]` traverse the same row of `A`, but both independently reload it. Likewise, threads computing different rows for the same output column repeatedly request values from the same column of `B`. Hardware caches may capture part of this reuse, but the kernel does not explicitly preserve the values on chip. V0 therefore exposes abundant output parallelism without improving the locality of the underlying dot products.
 
 #### Solution
 
@@ -166,7 +186,13 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 
 #### Approach
 
-The original implementation keeps one output element per thread but divides the reduction dimension into tiles of 16. One `16 x 16` block produces one `16 x 16` tile of `C`.
+The original implementation keeps one output element per thread but divides the reduction dimension into tiles of 16. One `16 x 16` block produces one `16 x 16` tile of `C`. This introduces an explicit data path:
+
+```text
+global memory -> shared memory -> thread registers -> C
+```
+
+Global memory holds the full matrices. Shared memory acts as a block-local staging area for the current pair of input tiles. Each thread finally holds its scalar accumulator in a register.
 
 For reduction tile `tile`, thread `(ty, tx)` loads:
 
@@ -180,6 +206,8 @@ After all 256 threads finish loading, each `A` value is shared by the 16 threads
 ```text
 S += A_shared[ty][inner] * B_shared[inner][tx]
 ```
+
+Thus, an input value fetched once from global memory can participate in as many as 16 multiply-add operations within the block. For a full reduction tile, the block loads \(16 \times 16\) values from each input and uses them to perform \(16 \times 16 \times 16\) multiply-add operations. The arithmetic is identical to V0, but much of the repeated global-memory traffic is replaced by lower-latency shared-memory access.
 
 <video controls width="760">
   <source src="../assets/02_Matrix_Multiplication/video_02.mp4" type="video/mp4">
@@ -250,7 +278,14 @@ row = blockIdx.y * 64 + ty * 16 + local_row
 col = blockIdx.x * 64 + tx
 ```
 
-The 16 partial sums remain in `float sum[16]`. During one reduction step, a thread loads one `B` value from shared memory and reuses it across all 16 accumulators. This increases register reuse and performs more arithmetic per shared-memory access than the one-output-per-thread version.
+The 16 partial sums remain in `float sum[16]`. During one reduction step, a thread loads one `B` value from shared memory and reuses it across all 16 accumulators:
+
+\[
+\text{sum}[r] \mathrel{+}= SA[ty \times TM+r,\text{inner}] \times b,
+\quad 0 \le r < 16.
+\]
+
+The one-output-per-thread kernel loads one `A` and one `B` shared-memory value to perform one multiply-add at each reduction position. Here the same `B` register feeds 16 multiply-adds. The additional accumulators consume registers, but they increase arithmetic work per shared-memory access and amortize block-level synchronization over more work per thread.
 
 The block still cooperatively fills `SA[64][16]` and `SB[16][64]`. Flattening the thread index makes loading independent of the output ownership mapping. Bounds are checked during cooperative loads and final stores, so partial tiles remain correct.
 
@@ -341,7 +376,22 @@ row = blockIdx.y * 64 + ty * 8 + local_row
 col = blockIdx.x * 64 + tx * 4 + local_col
 ```
 
-For one reduction position, the thread loads eight `A` values and four `B` values from shared memory into registers. Their outer product updates all 32 accumulators. Each `A` register contributes to four output columns, and each `B` register contributes to eight output rows. The thread therefore performs 32 multiply-add operations from only 12 shared-memory scalar loads.
+For one reduction position, the thread loads eight `A` values and four `B` values from shared memory into registers. Their outer product updates all 32 accumulators:
+
+\[
+C_{\text{micro}}
+\mathrel{+}=
+\begin{bmatrix}
+a_0\\a_1\\\vdots\\a_7
+\end{bmatrix}
+\begin{bmatrix}
+b_0&b_1&b_2&b_3
+\end{bmatrix}.
+\]
+
+This is another view of matrix multiplication. A scalar output is naturally described as an inner product, but an output tile can be accumulated as a sequence of rank-one outer products over the reduction dimension. At one reduction position, the eight-element `A` column fragment and the four-element `B` row fragment update the entire thread-owned `8 x 4` output tile.
+
+Each `A` register contributes to four output columns, and each `B` register contributes to eight output rows. The thread therefore performs 32 multiply-add operations from only 12 shared-memory scalar loads.
 
 This is the central benefit of two-dimensional thread tiling: the mathematical work is unchanged, but both operands are reused in registers before another shared-memory access is required.
 
@@ -425,7 +475,7 @@ extern "C" void solve(const float* A, const float* B, float* C, int M, int N, in
 
 #### Approach
 
-V2 retains the `8 x 4` register micro-tile and changes the reduction tile to `BK = 32`. It uses `float4` for four adjacent values at a time in:
+V2 retains the `8 x 4` register micro-tile and changes the reduction tile to `BK = 32`. A `float4` contains four adjacent FP32 values and occupies 16 bytes. The kernel uses it for four adjacent values at a time in:
 
 - global-memory loads from `A` and `B`;
 - stores into shared memory;
@@ -436,7 +486,7 @@ A vector load is valid only when its address is suitably aligned and all four el
 
 Within the optimized path, output rows in the final block are still guarded independently. Because `K` is a multiple of four, a valid four-column group is either fully inside the matrix or fully outside it.
 
-Vectorization reduces the number of memory instructions, but it does not reduce the required \(2MNK\) floating-point operations. Its benefit depends on alignment, instruction issue, and the balance between memory movement and arithmetic.
+The row-major layout makes consecutive columns contiguous. It is therefore natural to vectorize along `A`'s reduction coordinate, along `B`'s output-column coordinate, and along `C`'s output-column coordinate. One vector instruction replaces four scalar instructions at these transfer sites. The number of bytes and the required \(2MNK\) floating-point operations do not change; vectorization primarily reduces instruction and address-generation overhead. Its benefit consequently depends on alignment, instruction issue, and the balance between memory movement and arithmetic rather than following automatically from the wider type.
 
 #### Solution
 
@@ -619,7 +669,11 @@ SA[2][64][16]
 SB[2][16][64]
 ```
 
-The first tile is loaded before the main loop. For each later tile, a thread first issues global loads into private prefetch registers. It then computes from the current shared-memory buffer, waits until all threads have finished consuming that buffer, writes the prefetched values into the alternate buffer, and finally synchronizes before exchanging the read and write buffer indices.
+The first tile is loaded before the main loop. This is the **pipeline prologue**: no computation can begin until one complete input-tile pair is available in shared memory.
+
+For each later tile, a thread first issues global loads into private prefetch registers. It then computes from the current shared-memory buffer, waits until all threads have finished consuming that buffer, writes the prefetched values into the alternate buffer, and finally synchronizes before exchanging the read and write buffer indices. This is the **steady state**, in which work for reduction tile \(i\) is interleaved with data movement for tile \(i+1\).
+
+After the last prefetched tile becomes current, the kernel computes it without requesting another tile. This is the **pipeline epilogue**.
 
 The intended pipeline is:
 
@@ -631,7 +685,9 @@ tile i + 1: prefetch registers -> alternate shared-memory buffer
 
 This is software double buffering with register prefetch, not an asynchronous `cp.async` pipeline. The global loads are issued before the current tile is consumed, giving the compiler and GPU an opportunity to overlap outstanding memory operations with independent arithmetic. However, the implementation still needs block-wide barriers when a shared buffer changes roles.
 
-Double buffering is not automatically faster. It doubles shared-memory storage and adds prefetch registers, control flow, a pipeline prologue, and an epilogue. Those costs can reduce occupancy or offset hidden latency. In the measured workload, V3 is slightly slower than V2 on both tested GPUs, so the document reports it as a verified optimization experiment rather than claiming an improvement that was not observed.
+The actual source keeps `SA[buffer][row][inner]` and `SB[buffer][inner][col]` in straightforward row-major tile layouts. It does not silently add a transposed shared-memory layout or another unimplemented access transformation. This detail matters because a pipeline cannot be evaluated independently of its real load pattern, register footprint, shared-memory layout, and synchronization schedule.
+
+Double buffering is not automatically faster. It doubles shared-memory storage and adds prefetch registers, control flow, a pipeline prologue, and an epilogue. Those costs can reduce occupancy or offset hidden latency. In the measured workload, the base `64 x 64` V3 is slightly slower than the matched single-buffer V2 control on both tested GPUs. The later `128 x 128` V3 configuration is faster because its larger output tile changes reuse and scheduling at the same time; the separate controls are retained so that this result is not incorrectly attributed to double buffering alone.
 
 ##### Solution
 
@@ -1375,7 +1431,7 @@ The Triton implementation computes the same row-major matrix product as CUDA:
 C[m,k] = \sum_{n=0}^{N-1} A[m,n]B[n,k].
 \]
 
-A Triton program instance owns one `64 x 64` output tile. The reduction dimension is processed in chunks of 32:
+A Triton program instance owns one `64 x 64` output tile. Unlike CUDA source code, the implementation does not explicitly assign individual scalar outputs to `threadIdx` coordinates. It describes whole blocks of indices and values; Triton's compiler maps those operations onto GPU threads and warps. The reduction dimension is processed in chunks of 32:
 
 ```text
 BLOCK_SIZE_M = 64
@@ -1384,7 +1440,17 @@ BLOCK_SIZE_K = 64
 GROUP_SIZE_M = 8
 ```
 
-The output grid is flattened to one dimension. From the linear program ID, the kernel derives `PID_M` and `PID_K`, which identify the output-row and output-column tiles. Programs are ordered in groups of up to eight M tiles before advancing farther across K. This grouped ordering keeps programs that reuse nearby tiles of `A` and `B` close in launch order, improving the opportunity for cache reuse compared with a simple row-major two-dimensional grid.
+The output grid is flattened to one dimension. `tl.program_id(0)` identifies the current program instance. From that linear ID, the kernel derives `PID_M` and `PID_K`, which identify the output-row and output-column tiles. The complete grid contains:
+
+\[
+\left\lceil \frac{M}{64} \right\rceil
+\times
+\left\lceil \frac{K}{64} \right\rceil
+\]
+
+program instances.
+
+Programs are ordered in groups of up to eight M tiles before advancing farther across K. This changes only execution order, not which output tile each program owns. Nearby programs are more likely to reuse cached regions of `A` and `B`, whereas a simple row-major ordering can move farther through one output dimension before returning to reusable input data.
 
 For one program, the row and column offsets are:
 
@@ -1393,7 +1459,9 @@ a_m_offset = PID_M * 64 + [0, ..., 63]
 b_k_offset = PID_K * 64 + [0, ..., 63]
 ```
 
-During each reduction step, broadcasting constructs a `64 x 32` pointer tile from `A` and a `32 x 64` pointer tile from `B`. The row-major strides are passed explicitly as `(N, 1)`, `(K, 1)`, and `(K, 1)` for `A`, `B`, and `C`. Masked loads replace invalid positions with zero, so partial tiles in any dimension remain correct.
+During each reduction step, `tl.arange` creates the row, reduction, and column offsets. Adding singleton dimensions with `[:, None]` and `[None, :]` broadcasts those vectors into a `64 x 32` pointer tile from `A` and a `32 x 64` pointer tile from `B`. The row-major strides are passed explicitly as `(N, 1)`, `(K, 1)`, and `(K, 1)` for `A`, `B`, and `C`.
+
+Masks serve the same correctness role as bounds checks and zero padding in the CUDA kernels. A masked input location is loaded as zero, so it contributes nothing to the reduction. A masked output location is not stored. Consequently, the same kernel handles dimensions that are not multiples of 64 or 32 without launching a separate boundary kernel.
 
 `tl.dot` multiplies the two input tiles and accumulates into a float32 `64 x 64` block. `allow_tf32=False` keeps the calculation on the non-TF32 path used by this implementation. After the reduction loop, a final mask prevents stores outside `C`.
 
