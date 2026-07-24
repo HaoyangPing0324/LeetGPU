@@ -287,6 +287,11 @@ The 16 partial sums remain in `float sum[16]`. During one reduction step, a thre
 
 The one-output-per-thread kernel loads one `A` and one `B` shared-memory value to perform one multiply-add at each reduction position. Here the same `B` register feeds 16 multiply-adds. The additional accumulators consume registers, but they increase arithmetic work per shared-memory access and amortize block-level synchronization over more work per thread.
 
+<video controls width="760">
+  <source src="../assets/02_Matrix_Multiplication/video_03.mp4" type="video/mp4">
+  Your Markdown viewer does not support embedded video. Open [the one-dimensional thread-tiling animation](../assets/02_Matrix_Multiplication/video_03.mp4) directly.
+</video>
+
 The block still cooperatively fills `SA[64][16]` and `SB[16][64]`. Flattening the thread index makes loading independent of the output ownership mapping. Bounds are checked during cooperative loads and final stores, so partial tiles remain correct.
 
 #### Solution
@@ -390,6 +395,15 @@ b_0&b_1&b_2&b_3
 \]
 
 This is another view of matrix multiplication. A scalar output is naturally described as an inner product, but an output tile can be accumulated as a sequence of rank-one outer products over the reduction dimension. At one reduction position, the eight-element `A` column fragment and the four-element `B` row fragment update the entire thread-owned `8 x 4` output tile.
+
+![Outer-product view of matrix multiplication](../assets/02_Matrix_Multiplication/image_02.webp)
+
+*Each reduction position contributes one rank-one outer product to an output tile.*
+
+<video controls width="760">
+  <source src="../assets/02_Matrix_Multiplication/video_04.mp4" type="video/mp4">
+  Your Markdown viewer does not support embedded video. Open [the two-dimensional thread-tiling animation](../assets/02_Matrix_Multiplication/video_04.mp4) directly.
+</video>
 
 Each `A` register contributes to four output columns, and each `B` register contributes to eight output rows. The thread therefore performs 32 multiply-add operations from only 12 shared-memory scalar loads.
 
