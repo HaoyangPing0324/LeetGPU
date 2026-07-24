@@ -141,9 +141,10 @@ int main() {
 
 ### Test Result
 
-| Platform | Status | Average Time | Minimum Time | Maximum Time |
-|---|---|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 0.796 ms | 0.750 ms | 1.005 ms |
+| Platform | Status | Problem Size | Iterations | Average Time | Minimum Time | Maximum Time | Performance |
+|---|:---:|---|---:|---:|---:|---:|---:|
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | N=25000000 | 20 | 0.929 ms | 0.727 ms | 1.708 ms | 322.986 GB/s |
+| NVIDIA GeForce RTX 4090 | PASS | N=25000000 | 20 | 0.379 ms | 0.327 ms | 1.332 ms | 792.152 GB/s |
 
 ## Triton
 
@@ -230,9 +231,10 @@ if __name__ == "__main__":
 
 ### Test Result
 
-| Platform | Status | Average Time | Minimum Time | Maximum Time |
-|---|---|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 0.766 ms | 0.725 ms | 0.802 ms |
+| Platform | Status | Problem Size | Iterations | Average Time | Minimum Time | Maximum Time | Performance |
+|---|:---:|---|---:|---:|---:|---:|---:|
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | N=25000000 | 20 | 0.965 ms | 0.746 ms | 1.754 ms | 310.909 GB/s |
+| NVIDIA GeForce RTX 4090 | PASS | N=25000000 | 20 | 0.344 ms | 0.339 ms | 0.356 ms | 872.288 GB/s |
 
 
 ## PyTorch
@@ -299,9 +301,10 @@ if __name__ == "__main__":
 
 ### Test Result
 
-| Platform | Status | Average Time | Minimum Time | Maximum Time |
-|---|---|---:|---:|---:|
-| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | 0.787 ms | 0.740 ms | 1.055 ms |
+| Platform | Status | Problem Size | Iterations | Average Time | Minimum Time | Maximum Time | Performance |
+|---|:---:|---|---:|---:|---:|---:|---:|
+| NVIDIA GeForce RTX 5070 Ti Laptop GPU | PASS | N=25000000 | 20 | 0.788 ms | 0.744 ms | 1.087 ms | 380.604 GB/s |
+| NVIDIA GeForce RTX 4090 | PASS | N=25000000 | 20 | 0.331 ms | 0.330 ms | 0.339 ms | 905.015 GB/s |
 
 ## References
 

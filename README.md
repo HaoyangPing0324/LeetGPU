@@ -7,7 +7,7 @@ A structured workspace for organizing and solving [LeetGPU challenges](https://l
 | Problem | Difficulty | PyTorch | CUDA | Triton |
 | --- | :---: | :---: | :---: | :---: |
 | [01. Vector Addition](https://leetgpu.com/challenges/vector-addition) | ![Easy](assets/common/difficulty_easy.svg) | ![Completed](assets/common/completed.svg) | ![Completed](assets/common/completed.svg) | ![Completed](assets/common/completed.svg) |
-| [02. Matrix Multiplication](https://leetgpu.com/challenges/matrix-multiplication) | ![Easy](assets/common/difficulty_easy.svg) |  | ![Completed](assets/common/completed.svg) |  |
+| [02. Matrix Multiplication](https://leetgpu.com/challenges/matrix-multiplication) | ![Easy](assets/common/difficulty_easy.svg) | ![Completed](assets/common/completed.svg) | ![Completed](assets/common/completed.svg) | ![Completed](assets/common/completed.svg) |
 | [03. Matrix Transpose](https://leetgpu.com/challenges/matrix-transpose) | ![Easy](assets/common/difficulty_easy.svg) |  |  |  |
 | [04. Color Inversion](https://leetgpu.com/challenges/color-inversion) | ![Easy](assets/common/difficulty_easy.svg) |  |  |  |
 | [05. Matrix Addition](https://leetgpu.com/challenges/matrix-addition) | ![Easy](assets/common/difficulty_easy.svg) |  |  |  |
@@ -117,9 +117,11 @@ LeetGPU/
 │   │   ├── history.md
 │   │   └── <problem_name>.txt
 │   ├── triton/
-│   │   └── history.md
+│   │   ├── history.md
+│   │   └── <problem_name>.txt
 │   └── pytorch/
-│       └── history.md
+│       ├── history.md
+│       └── <problem_name>.txt
 ├── doc/
 ├── scripts/
 │   ├── .env.example
@@ -167,7 +169,7 @@ Linux client:
 
 ```bash
 bash scripts/run_pytorch_remote.sh <problem_name>
-bash scripts/run_cuda_remote.sh <problem_name>
+bash scripts/run_cuda_remote.sh <problem_name> [method]
 bash scripts/run_triton_remote.sh <problem_name>
 ```
 
@@ -175,7 +177,7 @@ Windows PowerShell client:
 
 ```powershell
 .\scripts\run_pytorch_remote.ps1 <problem_name>
-.\scripts\run_cuda_remote.ps1 <problem_name>
+.\scripts\run_cuda_remote.ps1 <problem_name> [method]
 .\scripts\run_triton_remote.ps1 <problem_name>
 ```
 
@@ -186,4 +188,6 @@ The scripts support all four client/server operating-system combinations:
 - Windows client to Linux server
 - Windows client to Windows server
 
-The author has only validated the CUDA workflow from a Linux client to a Windows server. All four combinations are implemented, but the other combinations have not been validated end to end by the author.
+The author has validated CUDA, Triton, and PyTorch from a Linux client to both Windows and Linux servers. All four client/server operating-system combinations are implemented; the Windows client workflows have not yet been validated end to end by the author.
+
+The optional CUDA `method` argument selects a named implementation when a challenge provides multiple CUDA optimization stages. Without it, the challenge's default implementation is used. Run histories always record correctness and timing when available, together with an optional problem-specific performance metric such as GFLOPS or effective GB/s.

@@ -1,7 +1,11 @@
 param(
     [Parameter(Mandatory = $true, Position = 0)]
     [ValidatePattern('^[A-Za-z0-9_-]+$')]
-    [string]$Problem
+    [string]$Problem,
+
+    [Parameter(Position = 1)]
+    [ValidatePattern('^[A-Za-z0-9_-]+$')]
+    [string]$Method = "default"
 )
 
 $ErrorActionPreference = "Stop"
@@ -44,6 +48,12 @@ if ([IO.Path]::IsPathRooted($env:LOCAL_PROJECT_PATH)) {
 }
 
 $SourceFile = Join-Path $ProjectDir "src/cuda/$Problem.cu"
+if ($Method -ne "default") {
+    if ($Problem -ne "02_Matrix_Multiplication") {
+        throw "Method selection is currently available only for 02_Matrix_Multiplication"
+    }
+    $SourceFile = Join-Path $ProjectDir "src/cuda/${Problem}_${Method}.cu"
+}
 $TestFile = Join-Path $ProjectDir "test/cuda/$Problem.cu"
 if (-not (Test-Path -LiteralPath $SourceFile) -or -not (Test-Path -LiteralPath $TestFile)) {
     throw "Source or test file not found for $Problem"
@@ -89,8 +99,8 @@ if (-not (Test-Path -LiteralPath $SummaryFile) -or (Get-Item -LiteralPath $Summa
     @(
         "# CUDA Run History",
         "",
-        "| Execution Time | Problem | Platform | Status | Average | Maximum | Minimum |",
-        "| --- | --- | --- | :---: | ---: | ---: | ---: |"
+        "| Execution Time | Problem | Method | Platform | Status | Problem Size | Iterations | Average | Maximum | Minimum | Performance |",
+        "| --- | --- | --- | --- | :---: | --- | ---: | ---: | ---: | ---: | ---: |"
     ) | Set-Content -LiteralPath $SummaryFile
 }
 
@@ -120,6 +130,7 @@ function Write-Log([string]$Message) {
 @(
     "============================================================",
     "CUDA problem: $Problem",
+    "CUDA method: $Method",
     "============================================================"
 ) | Set-Content -LiteralPath $ResultFile
 Get-Content -LiteralPath $ResultFile | ForEach-Object { Write-Host $_ }
@@ -139,6 +150,12 @@ if ($NativeExitCode -ne 0) { $Status = "FAIL" } else { $RemoteCreated = $true }
 if ($Status -eq "PASS") {
     Write-Log "[2/4] Uploading source and test files..."
     Invoke-ScpCommand $SourceFile "$RemoteDir/src/cuda/$Problem.cu" 2>&1 | Tee-Object -LiteralPath $ResultFile -Append
+    if ($NativeExitCode -eq 0 -and $Problem -eq "02_Matrix_Multiplication" -and
+        $Method -in @("v4_large_tile", "default")) {
+        $DependencyFile = Join-Path $ProjectDir "src/cuda/${Problem}_v3_double_buffered.cu"
+        Invoke-ScpCommand $DependencyFile "$RemoteDir/src/cuda/${Problem}_v3_double_buffered.cu" 2>&1 |
+            Tee-Object -LiteralPath $ResultFile -Append
+    }
     if ($NativeExitCode -eq 0) {
         Invoke-ScpCommand $TestFile "$RemoteDir/test/cuda/$Problem.cu" 2>&1 | Tee-Object -LiteralPath $ResultFile -Append
     }
@@ -187,13 +204,19 @@ for ($Index = 0; $Index -lt $Lines.Count - 1; $Index++) {
         break
     }
 }
-$Average = "N/A"; $Maximum = "N/A"; $Minimum = "N/A"
+$Average = "N/A"; $Maximum = "N/A"; $Minimum = "N/A"; $ProblemSize = "N/A"; $Iterations = "N/A"; $Performance = "N/A"
 $PerfLine = $Lines | Where-Object { $_ -match '^\[PERF\]' } | Select-Object -Last 1
 if ($null -ne $PerfLine) {
+    if ($PerfLine -match '^\[PERF\]\s+\S+\s+(.+),\s*iterations=(\d+),') {
+        $ProblemSize = $Matches[1]; $Iterations = $Matches[2]
+    }
     if ($PerfLine -match 'avg=([0-9]+(?:\.[0-9]+)?)\s*ms') { $Average = "$($Matches[1]) ms" }
     if ($PerfLine -match 'max=([0-9]+(?:\.[0-9]+)?)\s*ms') { $Maximum = "$($Matches[1]) ms" }
     if ($PerfLine -match 'min=([0-9]+(?:\.[0-9]+)?)\s*ms') { $Minimum = "$($Matches[1]) ms" }
+    if ($PerfLine -match '(?:throughput|effective\s+bandwidth)=([0-9]+(?:\.[0-9]+)?)\s*(\S+)') {
+        $Performance = "$($Matches[1]) $($Matches[2])"
+    }
 }
-Add-Content -LiteralPath $SummaryFile -Value "| $ExecutionTime | ``$Problem`` | $Platform | **$Status** | $Average | $Maximum | $Minimum |"
+Add-Content -LiteralPath $SummaryFile -Value "| $ExecutionTime | ``$Problem`` | ``$Method`` | $Platform | **$Status** | $ProblemSize | $Iterations | $Average | $Maximum | $Minimum | $Performance |"
 
 if ($Status -ne "PASS") { exit 1 }

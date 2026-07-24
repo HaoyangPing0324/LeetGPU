@@ -89,8 +89,8 @@ if (-not (Test-Path -LiteralPath $SummaryFile) -or (Get-Item -LiteralPath $Summa
     @(
         "# PyTorch Run History",
         "",
-        "| Execution Time | Problem | Platform | Status | Average | Maximum | Minimum |",
-        "| --- | --- | --- | :---: | ---: | ---: | ---: |"
+        "| Execution Time | Problem | Platform | Status | Problem Size | Iterations | Average | Maximum | Minimum | Performance |",
+        "| --- | --- | --- | :---: | --- | ---: | ---: | ---: | ---: | ---: |"
     ) | Set-Content -LiteralPath $SummaryFile
 }
 
@@ -179,13 +179,19 @@ for ($Index = 0; $Index -lt $Lines.Count - 1; $Index++) {
         break
     }
 }
-$Average = "N/A"; $Maximum = "N/A"; $Minimum = "N/A"
+$Average = "N/A"; $Maximum = "N/A"; $Minimum = "N/A"; $ProblemSize = "N/A"; $Iterations = "N/A"; $Performance = "N/A"
 $PerfLine = $Lines | Where-Object { $_ -match '^\[PERF\]' } | Select-Object -Last 1
 if ($null -ne $PerfLine) {
+    if ($PerfLine -match '^\[PERF\]\s+\S+\s+(.+),\s*iterations=(\d+),') {
+        $ProblemSize = $Matches[1]; $Iterations = $Matches[2]
+    }
     if ($PerfLine -match 'avg=([0-9]+(?:\.[0-9]+)?)\s*ms') { $Average = "$($Matches[1]) ms" }
     if ($PerfLine -match 'max=([0-9]+(?:\.[0-9]+)?)\s*ms') { $Maximum = "$($Matches[1]) ms" }
     if ($PerfLine -match 'min=([0-9]+(?:\.[0-9]+)?)\s*ms') { $Minimum = "$($Matches[1]) ms" }
+    if ($PerfLine -match '(?:throughput|effective\s+bandwidth)=([0-9]+(?:\.[0-9]+)?)\s*(\S+)') {
+        $Performance = "$($Matches[1]) $($Matches[2])"
+    }
 }
-Add-Content -LiteralPath $SummaryFile -Value "| $ExecutionTime | ``$Problem`` | $Platform | **$Status** | $Average | $Maximum | $Minimum |"
+Add-Content -LiteralPath $SummaryFile -Value "| $ExecutionTime | ``$Problem`` | $Platform | **$Status** | $ProblemSize | $Iterations | $Average | $Maximum | $Minimum | $Performance |"
 
 if ($Status -ne "PASS") { exit 1 }

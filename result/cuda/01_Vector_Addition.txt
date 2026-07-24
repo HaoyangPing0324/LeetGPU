@@ -1,21 +1,23 @@
 ============================================================
 CUDA problem: 01_Vector_Addition
+CUDA method: default
 ============================================================
 [1/4] Creating remote directories...
 [2/4] Uploading source and test files...
 [3/4] Compiling and running...
-=== GPU === 
-NVIDIA GeForce RTX 5070 Ti Laptop GPU, 592.01, 12227 MiB
-=== Compile: 01_Vector_Addition === 
-nvcc warning : Support for offline compilation for architectures prior to '<compute/sm/lto>_75' will be removed in a future release (Use -Wno-deprecated-gpu-targets to suppress warning).
-01_Vector_Addition.cu
-tmpxft_00008c68_00000000-7_01_Vector_Addition.cudafe1.cpp
-C:\Users\1\cuda_remote\01_Vector_Addition_20260720_105352_3628820\test\cuda\01_Vector_Addition.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
-C:\Users\1\cuda_remote\01_Vector_Addition_20260720_105352_3628820\test\cuda\01_Vector_Addition.cu(1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
-01_Vector_Addition.cu
-tmpxft_00008c68_00000000-11_01_Vector_Addition.cudafe1.cpp
-  正在创建库 cuda_app.lib 和对象 cuda_app.exp
-=== Program output: 01_Vector_Addition === 
-Test passed.
+=== GPU ===
+NVIDIA GeForce RTX 4090, 580.82.09, 24564 MiB
+=== Compile: 01_Vector_Addition ===
+=== Program output: 01_Vector_Addition ===
+=== Vector addition correctness ===
+[PASS] vector_add correctness N=1
+[PASS] vector_add correctness N=255
+[PASS] vector_add correctness N=256
+[PASS] vector_add correctness N=257
+[PASS] vector_add correctness N=4099
+[PASS] vector_add correctness N=1048613
+=== Vector addition performance ===
+[PERF] vector_add N=25000000, iterations=20, avg=0.379 ms, max=1.332 ms, min=0.327 ms, effective bandwidth=792.152 GB/s
+PASS: vector_add test suite
 [4/4] Cleaning remote files...
 Result: PASS - 01_Vector_Addition

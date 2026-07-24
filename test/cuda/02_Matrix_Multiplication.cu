@@ -204,12 +204,14 @@ static bool run_performance_test() {
 }
 
 int main() {
-    constexpr std::array<MatrixShape, 5> correctness_shapes = {{
+    constexpr std::array<MatrixShape, 7> correctness_shapes = {{
         {1, 1, 1},
         {2, 2, 2},
         {1, 3, 1},
         {17, 19, 23},
-        {127, 129, 131}
+        {127, 129, 131},
+        {64, 96, 128},
+        {128, 128, 128}
     }};
 
     bool success = true;
@@ -229,3 +231,74 @@ int main() {
                           : "FAIL: matrix multiplication test suite\n");
     return success ? 0 : 1;
 }
+/*
+
+#include <cuda_runtime.h>
+
+#include <array>
+#include <cmath>
+#include <iostream>
+
+extern "C" void solve(const float* a, const float* b, float* c,
+                      int m, int n, int k);
+
+int main() {
+    constexpr int m = 2;
+    constexpr int n = 2;
+    constexpr int k = 2;
+    const std::array<float, 4> matrix_a = {1.0f, 2.0f, 3.0f, 4.0f};
+    const std::array<float, 4> matrix_b = {5.0f, 6.0f, 7.0f, 8.0f};
+    const std::array<float, 4> expected = {19.0f, 22.0f, 43.0f, 50.0f};
+    std::array<float, 4> actual = {};
+    constexpr size_t bytes = 4 * sizeof(float);
+
+    float* device_a = nullptr;
+    float* device_b = nullptr;
+    float* device_c = nullptr;
+
+    auto check_cuda = [](cudaError_t status, const char* operation) {
+        if (status == cudaSuccess) {
+            return true;
+        }
+        std::cerr << "Test failed. CUDA error in " << operation << ": "
+                  << cudaGetErrorString(status) << '\n';
+        return false;
+    };
+
+    bool success = check_cuda(cudaMalloc(&device_a, bytes), "cudaMalloc(device_a)") &&
+                   check_cuda(cudaMalloc(&device_b, bytes), "cudaMalloc(device_b)") &&
+                   check_cuda(cudaMalloc(&device_c, bytes), "cudaMalloc(device_c)") &&
+                   check_cuda(cudaMemcpy(device_a, matrix_a.data(), bytes,
+                                         cudaMemcpyHostToDevice), "copy matrix_a") &&
+                   check_cuda(cudaMemcpy(device_b, matrix_b.data(), bytes,
+                                         cudaMemcpyHostToDevice), "copy matrix_b");
+
+    if (success) {
+        solve(device_a, device_b, device_c, m, n, k);
+        success = check_cuda(cudaGetLastError(), "solve") &&
+                  check_cuda(cudaDeviceSynchronize(), "synchronize") &&
+                  check_cuda(cudaMemcpy(actual.data(), device_c, bytes,
+                                        cudaMemcpyDeviceToHost), "copy result");
+    }
+
+    cudaFree(device_a);
+    cudaFree(device_b);
+    cudaFree(device_c);
+
+    if (!success) {
+        return 1;
+    }
+
+    for (size_t index = 0; index < actual.size(); ++index) {
+        if (std::fabs(actual[index] - expected[index]) > 1e-5f) {
+            std::cerr << "Test failed at index " << index
+                      << ". Expected: " << expected[index]
+                      << ", Actual: " << actual[index] << '\n';
+            return 1;
+        }
+    }
+
+    std::cout << "Test passed.\n";
+    return 0;
+}
+*/

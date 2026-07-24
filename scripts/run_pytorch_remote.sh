@@ -38,7 +38,7 @@ timestamp="$(date +%Y%m%d_%H%M%S)"; execution_time="$(date '+%Y-%m-%d %H:%M:%S %
 remote_dir="${REMOTE_ROOT}/${problem}_${run_id}"; remote_dir_win="${remote_dir//\//\\}"
 result_dir="$PROJECT_DIR/result/$IMPLEMENTATION"; result_file="$result_dir/${problem}.txt"; summary_file="$result_dir/history.md"
 mkdir -p "$result_dir"
-if [[ ! -s "$summary_file" ]]; then printf '# PyTorch Run History\n\n| Execution Time | Problem | Platform | Status | Average | Maximum | Minimum |\n| --- | --- | --- | :---: | ---: | ---: | ---: |\n' > "$summary_file"; fi
+if [[ ! -s "$summary_file" ]]; then printf '# PyTorch Run History\n\n| Execution Time | Problem | Platform | Status | Problem Size | Iterations | Average | Maximum | Minimum | Performance |\n| --- | --- | --- | :---: | --- | ---: | ---: | ---: | ---: | ---: |\n' > "$summary_file"; fi
 
 cleanup_remote() {
     if [[ "$REMOTE_OS" == "windows" ]]; then
@@ -71,13 +71,17 @@ status="PASS"; if ! run_remote 2>&1 | tee -a "$result_file"; then status="FAIL";
 if [[ "${KEEP_REMOTE:-0}" == "1" ]]; then echo "[4/4] Remote files retained at: $remote_dir" | tee -a "$result_file"; else echo "[4/4] Cleaning remote files..." | tee -a "$result_file"; cleanup_remote 2>&1 | tee -a "$result_file" || true; fi
 echo "Result: $status - $problem" | tee -a "$result_file"
 perf_line="$(tr -d '\r' < "$result_file" | awk '/^\[PERF\]/{line=$0} END{print line}')"
-average="N/A"; maximum="N/A"; minimum="N/A"
+average="N/A"; maximum="N/A"; minimum="N/A"; problem_size="N/A"; iterations="N/A"; performance="N/A"
 platform="$(tr -d '\r' < "$result_file" | awk '/^=== GPU ===/{getline; sub(/,.*/, ""); print; exit}')"
 [[ -n "$platform" ]] || platform="N/A"
 if [[ -n "$perf_line" ]]; then
+    [[ "$perf_line" =~ ^\[PERF\][[:space:]]+[^[:space:]]+[[:space:]]+(.+),[[:space:]]iterations=([0-9]+), ]] &&
+        { problem_size="${BASH_REMATCH[1]}"; iterations="${BASH_REMATCH[2]}"; }
     [[ "$perf_line" =~ avg=([0-9]+([.][0-9]+)?)[[:space:]]ms ]] && average="${BASH_REMATCH[1]} ms"
     [[ "$perf_line" =~ max=([0-9]+([.][0-9]+)?)[[:space:]]ms ]] && maximum="${BASH_REMATCH[1]} ms"
     [[ "$perf_line" =~ min=([0-9]+([.][0-9]+)?)[[:space:]]ms ]] && minimum="${BASH_REMATCH[1]} ms"
+    [[ "$perf_line" =~ (throughput|effective[[:space:]]bandwidth)=([0-9]+([.][0-9]+)?)[[:space:]]([^[:space:]]+) ]] &&
+        performance="${BASH_REMATCH[2]} ${BASH_REMATCH[4]}"
 fi
-printf '| %s | `%s` | %s | **%s** | %s | %s | %s |\n' "$execution_time" "$problem" "$platform" "$status" "$average" "$maximum" "$minimum" >> "$summary_file"
+printf '| %s | `%s` | %s | **%s** | %s | %s | %s | %s | %s | %s |\n' "$execution_time" "$problem" "$platform" "$status" "$problem_size" "$iterations" "$average" "$maximum" "$minimum" "$performance" >> "$summary_file"
 [[ "$status" == "PASS" ]]
